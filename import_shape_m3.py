@@ -122,18 +122,16 @@ class M3Region:
 class M3Div:
 
 	def __init__(self, file):
+		referenceIndices = file.readReferenceEntry()
+		referenceRegions = file.readReferenceEntry()
+		referenceBat     = file.readReferenceEntry()
+		referenceMsec    = file.readReferenceEntry()
+		
+		self.Indices = file.readIndices(referenceIndices)
+		self.Regions = file.readRegions(referenceRegions)
 		self.Bat     = []
 		self.Msec    = []
-		referenceIndices = M3Reference(file)
-		referenceRegions = M3Reference(file)
-		referenceBat     = M3Reference(file)
-		referenceMsec    = M3Reference(file)
-		
-		referenceIndicesEntry = file.ReferenceTable[referenceIndices.Index]
-		referenceRegionsEntry = file.ReferenceTable[referenceRegions.Index]
-		
-		self.Indices = file.readIndices(referenceIndicesEntry)
-		self.Regions = file.readRegions(referenceRegionsEntry)
+
 
 class M3Vertex:
 	
@@ -158,23 +156,19 @@ class M3Model23:
 		file.skipBytes(0x60)
 		m3model.Flags = file.readUnsignedInt()
 
-		vertexReference = M3Reference(file)
-		viewReference   = M3Reference(file)
+		vertexReference = file.readReferenceEntry()
+		viewReference   = file.readReferenceEntry()
 		
-		viewReferenceEntry = file.ReferenceTable[viewReference.Index]
-		vertexReferenceEntry = file.ReferenceTable[vertexReference.Index]
-		
-		# if ((m3model.Flags & 0x20000) != 0):
 		if ((m3model.Flags & 0x40000) != 0):
-			count = vertexReferenceEntry.Count // 36
-			file.seek(vertexReferenceEntry.Offset)
+			count = vertexReference.Count // 36
+			file.seek(vertexReference.Offset)
 			for i in range(count):
 				ver = M3Vertex(file)
 				m3model.Vertices.append(ver.Position)
 		else:
 			raise Exception('import_m3: !ERROR! Unsupported vertex format')
 			
-		file.seek(viewReferenceEntry.Offset)
+		file.seek(viewReference.Offset)
 		div = M3Div(file)
 		
 		submeshes = []
@@ -200,15 +194,7 @@ class M3ReferenceEntry:
 		self.Offset = file.readUnsignedInt()
 		self.Count  = file.readUnsignedInt()
 		self.Type   = file.readUnsignedInt()
-		
-	def print(self):
-		print("-----------------------")
-		print("Id: " + str(self.Id))
-		print("Offset: " + str(self.Offset))
-		print("Count: " + str(self.Count))
-		print("Type: " + str(self.Type))
-		print("-----------------------")
-		
+				
 class M3Header:
 
 	def __init__(self, file):
