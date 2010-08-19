@@ -69,6 +69,11 @@ class M3File:
 	def readM3Reference(self):
 		return M3Reference(self)
 		
+	def readReferenceEntry(self):
+		ref = M3Reference(self)
+		
+		return self.ReferenceTable[ref.Index]
+		
 	def readIndices(self, reference):
 		faces = []
 		count = reference.Count
@@ -195,7 +200,15 @@ class M3ReferenceEntry:
 		self.Offset = file.readUnsignedInt()
 		self.Count  = file.readUnsignedInt()
 		self.Type   = file.readUnsignedInt()
-
+		
+	def print(self):
+		print("-----------------------")
+		print("Id: " + str(self.Id))
+		print("Offset: " + str(self.Offset))
+		print("Count: " + str(self.Count))
+		print("Type: " + str(self.Type))
+		print("-----------------------")
+		
 class M3Header:
 
 	def __init__(self, file):
@@ -226,6 +239,9 @@ class M3Data:
 		
 		# Reading model
 		modelReference = file.ReferenceTable[self.m3Header.ModelIndex]
+		
+		if (modelReference.Type != 23):
+			raise Exception('import_m3: !ERROR! Unsupported model format')
 		
 		file.seek(modelReference.Offset)
 		self.m3Model = M3Model23.read(file)
