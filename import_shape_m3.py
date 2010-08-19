@@ -159,27 +159,29 @@ class M3Model23:
 		viewReferenceEntry = file.ReferenceTable[viewReference.Index]
 		vertexReferenceEntry = file.ReferenceTable[vertexReference.Index]
 		
-		if ((m3model.Flags & 0x20000) != 0):
-			if ((m3model.Flags & 0x40000) != 0):
-				count = vertexReferenceEntry.Count // 36
-				file.seek(vertexReferenceEntry.Offset)
-				for i in range(count):
-					ver = M3Vertex(file)
-					m3model.Vertices.append(ver.Position)
+		# if ((m3model.Flags & 0x20000) != 0):
+		if ((m3model.Flags & 0x40000) != 0):
+			count = vertexReferenceEntry.Count // 36
+			file.seek(vertexReferenceEntry.Offset)
+			for i in range(count):
+				ver = M3Vertex(file)
+				m3model.Vertices.append(ver.Position)
+		else:
+			raise Exception('import_m3: !ERROR! Unsupported vertex format')
 			
 		file.seek(viewReferenceEntry.Offset)
 		div = M3Div(file)
 		
 		submeshes = []
 		
-		for i in range(len(div.Regions)):
-			offset = div.Regions[i].OffsetVert
-			number = div.Regions[i].NumVert
+		for regn in div.Regions:
+			offset = regn.OffsetVert
+			number = regn.NumVert
 			
 			vertices = m3model.Vertices[offset:offset + number]
 			faces = []
 			
-			for j in range(div.Regions[i].OffsetFaces, div.Regions[i].OffsetFaces + div.Regions[i].NumFaces, 3):
+			for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
 				faces.append((div.Indices[j], div.Indices[j+1], div.Indices[j+2]))
 				
 			submeshes.append(Submesh(vertices, faces))
@@ -202,6 +204,9 @@ class M3Header:
 		self.ReferenceTableCount  = file.readUnsignedInt()
 		self.ModelCount           = file.readUnsignedInt()
 		self.ModelIndex           = file.readUnsignedInt()
+		
+		if self.Id != b'MD34':
+			raise Exception('import_m3: !ERROR! Unsupported file format')
 		
 		count  = self.ReferenceTableCount
 		offset = self.ReferenceTableOffset
@@ -236,9 +241,9 @@ def import_m3(context, filepath):
 	m3data = M3Data(filepath)
 	name = basename(filepath)
 	
-	for i in range(len(m3data.m3Model)):
+	for submesh in m3data.m3Model:
 		mesh = bpy.data.meshes.new(name)
-		mesh.from_pydata(m3data.m3Model[i].Vertices, [], m3data.m3Model[i].Faces)
+		mesh.from_pydata(submesh.Vertices, [], submesh.Faces)
 		mesh.update(True)
 		ob = bpy.data.objects.new(name, mesh)
 		context.scene.objects.link(ob)
