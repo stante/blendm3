@@ -7,27 +7,32 @@ on this site:
     http://code.google.com/p/blendm3/
 	
 You should regularly check this website for updates. New features are 
-continously added. The project aims to fully support the .m3 file 
+continuously added. The project aims to fully support the .m3 file 
 format.
 
 
-== History
+=== History
+0.12 Alexander Stante (stante_at_gmail_dot_com)
+  * Support for all vertex formats added.
 
-0.10 Alexander Stante (stante@gmail.com)
-  - Basic support for reading geometry.
+0.11 Alexander Stante (stante_at_gmail_dot_com)
+  * Error handling improved.
+  
+0.10 Alexander Stante (stante_at_gmail_dot_com)
+  * Basic support for reading geometry.
   
 
-== Acknowledgement
+=== Acknowledgment
 
 This plugin would not be possible with the tons of information about the
 .m3 provided by the libm3 project. The project homepage is 
 'http://code.google.com/p/libm3/' and is a great source for information
-about the file format. Also a big thank NiNtoxicated who develpoped a
+about the file format. Also a big thank NiNtoxicated who developed a
 3DS Max plugin which is also a great source to understand the .m3 file
 format.
 
 
-== Installation
+=== Installation
 
 The following files are included with the distribution of the plugin:
 
