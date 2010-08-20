@@ -139,7 +139,7 @@ class M3Vertex:
     VERTEX40 = 2
     VERTEX44 = 3
     
-    def __init__(self, file, type):
+    def __init__(self, file, type, flags):
         self.Position   = file.readVertex()
         self.BoneWeight = file.readBytes(4)
         self.BoneIndex  = file.readBytes(4)
@@ -149,6 +149,10 @@ class M3Vertex:
         # Vertex type specifies how many UV entries the Vertex format contains
         for i in range(type + 1):
             self.UV.append(file.readArrayUnsignedShort(2))
+        
+        # Further investigation of this flag needed
+        if ((flags & 0x200) != 0):
+            file.skipBytes(4)
             
         self.Tangent    = file.readBytes(4)
 
@@ -160,7 +164,6 @@ class M3Model23:
         self.Faces = []
         
     def read(file):
-        print ("reading module")
         m3model = M3Model23()
         file.skipBytes(0x60)
         m3model.Flags = file.readUnsignedInt()
@@ -173,7 +176,7 @@ class M3Model23:
             print("Reading %s vertices, Format: 0x100000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX44)
+                ver = M3Vertex(file, M3Vertex.VERTEX44, m3model.Flags)
                 m3model.Vertices.append(ver.Position)
                 
         elif ((m3model.Flags & 0x80000) != 0):
@@ -181,7 +184,7 @@ class M3Model23:
             print("Reading %s vertices, Format: 0x80000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX40)
+                ver = M3Vertex(file, M3Vertex.VERTEX40, m3model.Flags)
                 m3model.Vertices.append(ver.Position)
  
         elif ((m3model.Flags & 0x40000) != 0):
@@ -189,7 +192,7 @@ class M3Model23:
             print("Reading %s vertices, Format: 0x40000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX36)
+                ver = M3Vertex(file, M3Vertex.VERTEX36, m3model.Flags)
                 m3model.Vertices.append(ver.Position)
 
         elif ((m3model.Flags & 0x20000) != 0):
@@ -197,13 +200,11 @@ class M3Model23:
             print("Reading %s vertices, Format: 0x20000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX32)
+                ver = M3Vertex(file, M3Vertex.VERTEX32, m3model.Flags)
                 m3model.Vertices.append(ver.Position)
 
         else:
             raise Exception('import_m3: !ERROR! Unsupported vertex format. Flags: %s' % hex(m3model.Flags))
-        
-        print ("finished reading module")
         
         file.seek(viewReference.Offset)
         div = M3Div(file)
@@ -231,6 +232,14 @@ class M3ReferenceEntry:
         self.Offset = file.readUnsignedInt()
         self.Count  = file.readUnsignedInt()
         self.Type   = file.readUnsignedInt()
+        
+    def print(self):
+        print("------------------------------------------------")
+        print("Id:     " + str(self.Id))
+        print("Offset: " + hex(self.Offset))
+        print("Count:  " + hex(self.Count))
+        print("Type:   " + hex(self.Type))
+        print("------------------------------------------------")
                 
 class M3Header:
 
