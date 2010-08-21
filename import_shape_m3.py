@@ -163,7 +163,7 @@ class M3Vertex:
                 print("WTFv : " + str(v))
 
             
-            u = 0
+            # u = 0
             v = 1 - v
             self.UV.append((u,v))
         
@@ -178,7 +178,6 @@ class M3Model23:
     def __init__(self):
         self.Flags = 0
         self.Vertices = []
-        self.UV1 = []
         self.Faces = []
         
     def read(file):
@@ -196,36 +195,28 @@ class M3Model23:
             print("Reading %s vertices, Format: 0x100000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX44, m3model.Flags)
-                m3model.Vertices.append(ver.Position)
-                m3model.UV1.append(ver.UV[uvIndex])
+                m3model.Vertices.append(M3Vertex(file, M3Vertex.VERTEX44, m3model.Flags))
                 
         elif ((m3model.Flags & 0x80000) != 0):
             count = vertexReference.Count // 40
             print("Reading %s vertices, Format: 0x80000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX40, m3model.Flags)
-                m3model.Vertices.append(ver.Position)
-                m3model.UV1.append(ver.UV[uvIndex])
+                m3model.Vertices.append(M3Vertex(file, M3Vertex.VERTEX40, m3model.Flags))
 
         elif ((m3model.Flags & 0x40000) != 0):
             count = vertexReference.Count // 36
             print("Reading %s vertices, Format: 0x40000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX36, m3model.Flags)
-                m3model.Vertices.append(ver.Position)
-                m3model.UV1.append(ver.UV[uvIndex])
+                m3model.Vertices.append(M3Vertex(file, M3Vertex.VERTEX36, m3model.Flags))
 
         elif ((m3model.Flags & 0x20000) != 0):
             count = vertexReference.Count // 32
             print("Reading %s vertices, Format: 0x20000, Flags: %s" % (count, hex(m3model.Flags)))
             file.seek(vertexReference.Offset)
             for i in range(count):
-                ver = M3Vertex(file, M3Vertex.VERTEX32, m3model.Flags)
-                m3model.Vertices.append(ver.Position)
-                m3model.UV1.append(ver.UV[uvIndex])
+                m3model.Vertices.append(M3Vertex(file, M3Vertex.VERTEX32, m3model.Flags))
                 
         else:
             raise Exception('import_m3: !ERROR! Unsupported vertex format. Flags: %s' % hex(m3model.Flags))
@@ -240,14 +231,12 @@ class M3Model23:
             number = regn.NumVert
             
             vertices = m3model.Vertices[offset:offset + number]
-            uvs = m3model.UV1
             faces = []
             
             for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
                 faces.append((div.Indices[j], div.Indices[j+1], div.Indices[j+2]))
-                #uvs.append((m3model.UV1[div.Indices[j]], m3model.UV1[div.Indices[j+1]], m3model.UV1[div.Indices[j+1]]))
                 
-            submeshes.append(Submesh(vertices, faces, uvs))
+            submeshes.append(Submesh(vertices, faces))
         
         return submeshes
                     
@@ -323,11 +312,19 @@ def createMaterial():
                 
 class Submesh:
 
-    def __init__(self, vertices, faces, uv1):
+    def __init__(self, vertices, faces):
         self.Name = "NONAME"
-        self.Vertices = vertices
+        self.Vertices = []
+        # TODO: maybe better to unflatten here instead of in calling function
         self.Faces = faces
-        self.UV1 = uv1
+        self.UV1 = []
+        
+        # position in vertices array
+        for v in vertices:
+            self.Vertices.append(v.Position)
+            
+        for i, f in enumerate(self.Faces):
+            self.UV1.append(((vertices[f[0]].UV[0]), (vertices[f[1]].UV[0]), (vertices[f[2]].UV[0])))
 
 def import_m3(context, filepath):
     m3data = M3Data(filepath)
@@ -347,12 +344,13 @@ def import_m3(context, filepath):
 #            data.uv2 = texcoord[1]
 #            data.uv3 = texcoord[2]
 
-        for i, face in enumerate(submesh.Faces):
+        for i, uv in enumerate(submesh.UV1):
             data = uvtex.data[i]
-            data.uv1 = submesh.UV1[face[0]]
-            data.uv2 = submesh.UV1[face[1]]
-            data.uv3 = submesh.UV1[face[2]]
+            data.uv1 = uv[0]
+            data.uv2 = uv[1]
+            data.uv3 = uv[2]
             data.uv4 = (0,0)
+            print(uv)
             
         m = createMaterial()
         
