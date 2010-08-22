@@ -112,7 +112,8 @@ class M3File:
             
         elif (entry.Id == b'MAT_'):
             result = self.readMAT(entry)
-            
+        elif (entry.Id == b'MATM'):
+            result = self.readMATM(entry)
         else:
             #raise Exception('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
             print('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
@@ -122,6 +123,18 @@ class M3File:
         self.file.seek(position)
         
         return result
+    
+    def readMATM(self, reference):
+        matm = []
+        count = reference.Count
+        offset = reference.Offset
+        
+        self.file.seek(offset)
+        
+        for i in range(count):
+            matm.append(MATM(self))
+            
+        return matm
     
     def readLAYR(self, reference):
         layr = 0
@@ -186,6 +199,15 @@ class M3File:
             
         return mat
 
+class MATM:
+    
+    def __init__(self, file):
+        self.MaterialType  = file.readUnsignedInt()
+        self.MaterialIndex = file.readUnsignedInt()
+        
+        if (self.MaterialType != 1):
+            print("Unsupported material type")
+        
 class MAT:
 
     def __init__(self, file):
@@ -358,11 +380,9 @@ class MODL23:
         D = file.readReferenceEntry()
         print("D")
         D.print()
-        MaterialLookup = file.readReferenceEntry()
-        print("Material Lookup")
-        MaterialLookup.print()
-        
-        m3model.Materials = file.readReferenceById()
+
+        m3model.MaterialLookup = file.readReferenceById()
+        m3model.Materials      = file.readReferenceById()
         
         # Reading Vertices
         count = 0
@@ -401,7 +421,7 @@ class MODL23:
         submeshes = []
         
         # Reading DIV.REGN
-        for regn in div.Regions:
+        for i, regn in enumerate(div.Regions):
             offset = regn.OffsetVert
             number = regn.NumVert
             
@@ -410,8 +430,17 @@ class MODL23:
             
             for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
                 faces.append((div.Indices[j], div.Indices[j+1], div.Indices[j+2]))
-                
-            submeshes.append(Submesh(vertices, faces, m3model.Materials[0]))
+
+            print(len(m3model.MaterialLookup))
+            print(len(m3model.Materials))
+            print(len(div.Regions))
+            print(len(div.Bat))
+            
+            if (len(div.Regions) != len(div.Bat)):
+                raise Exception("Assumption failed")
+            # Dangerous: assumes that for every REGN there is an BAT. Also assumes they are referenced
+            # consequtivly in reverese order!
+            submeshes.append(Submesh(vertices, faces, m3model.Materials[m3model.MaterialLookup[div.Bat[len(div.Regions)- (i+1)].MAT_Index].MaterialIndex]))
         
         return submeshes
                     
@@ -503,7 +532,7 @@ class Submesh:
         for i, f in enumerate(self.Faces):
             self.UV1.append(((vertices[f[0]].UV[0]), (vertices[f[1]].UV[0]), (vertices[f[2]].UV[0])))
 
-def import_m3(context, filepath):
+def import_m3(context, filepath, importMaterial):
     m3data = M3Data(filepath)
     name = basename(filepath)
     os.chdir(os.path.dirname(filepath))
@@ -522,12 +551,14 @@ def import_m3(context, filepath):
             data.uv2 = uv[1]
             data.uv3 = uv[2]
             data.uv4 = (0,0)
-            
-        m = createMaterial(submesh.Material)
         
         mesh.update(True)
         ob = bpy.data.objects.new(name, mesh)
-        ob.data.add_material(m)
+        
+        if importMaterial:
+            m = createMaterial(submesh.Material)
+            ob.data.add_material(m)
+        
         context.scene.objects.link(ob)
 
 class IMPORT_OT_m3(bpy.types.Operator):
@@ -540,13 +571,13 @@ class IMPORT_OT_m3(bpy.types.Operator):
     # Options to select import porperties
     IMPORT_MESH      = BoolProperty(name="Import Mesh", description="Import the Model Geometry", default=True)
     IMPORT_NORMALS   = BoolProperty(name="Import Normals", description="Import the Model Normals", default=False)
-    IMPORT_MATERIALS = BoolProperty(name="Import Bones", description="Import the Model Bones", default=False)
+    IMPORT_MATERIALS = BoolProperty(name="Import Material", description="Import the Model Material", default=True)
     
     def poll(self, context):
         return True
         
     def execute(self, context):
-        import_m3(context, self.properties.filepath)
+        import_m3(context, self.properties.filepath, self.properties.IMPORT_MATERIALS)
         return {'FINISHED'}
         
     def invoke(self, context, event):
