@@ -12,6 +12,10 @@ format.
 
 
 === History
+0.13 Alexander Stante (stante_at_gmail_dot_com)
+  * Support for material import added
+  * Normals, Emissive and Diffusive are supported
+
 0.12 Alexander Stante (stante_at_gmail_dot_com)
   * Support for all vertex formats added.
 
@@ -45,3 +49,13 @@ To install the plugin just copy the file 'import_shape_m3.py' into your
 blender plugin directory. After restarting Blender the import menu should
 contain a 'Blizzard M3 (.m3)' entry. The plugin is tested with Blender
 version 2.53.
+
+=== Usage
+
+To load textures assure that the 'Assets' directory is in the same directory
+as your model. After selecting import assure that the 'Create Material' in
+your file selection window is set.
+
+Loading textures is experimental and does not work correctly on some models.
+Furthermore, to show the models textured in the preview window you have to
+manually assign the texture to the models faces. 
