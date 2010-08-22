@@ -209,7 +209,7 @@ class MATM:
             print("Unsupported material type")
         
 class MAT:
-
+    LAYER_TYPE = [('COLOR', 0), ('SPECULARITY', 2), ('NORMAL', 9)]
     def __init__(self, file):
         # Read chunk
         self.Name = file.readReferenceById()
@@ -228,8 +228,8 @@ class MAT:
         
         for i in range(13):
             self.Layers.append(file.readReferenceById())
-            if self.Layers[i] != None:
-                print("%s: %s" % (i, self.Layers[i].Path))
+            # if self.Layers[i] != None:
+                # print("%s: %s" % (i, self.Layers[i].Path))
             
         self.D3 = file.readUnsignedInt()
         self.LayerBlend = file.readUnsignedInt()
@@ -238,9 +238,7 @@ class MAT:
         self.SpecularType = file.readUnsignedInt()
         
         file.skipBytes(2*0x14)
-        
-        print(self.Name)
-        
+                
 class LAYR:
 
     def __init__(self, file):
@@ -256,10 +254,10 @@ class BAT:
         file.skipBytes(4)
         self.MAT_Index = file.readUnsignedShort()
         file.skipBytes(2)
-        print("BAT---------------------------------------------")
-        print("REGN Index : " + str(self.REGN_Index))
-        print("MAT Index  : " + str(self.MAT_Index))
-        print("------------------------------------------------")
+        #print("BAT---------------------------------------------")
+        #print("REGN Index : " + str(self.REGN_Index))
+        #print("MAT Index  : " + str(self.MAT_Index))
+        #print("------------------------------------------------")
 
 class M3Reference:
 
@@ -296,16 +294,16 @@ class M3Div:
         self.Bat     = file.readBat(referenceBat)
         self.Msec    = file.readMsec(referenceMsec)
 
-        print("M3Div-------------------------------------------")
-        print("Vertex List Count  : " + str(referenceIndices.Count))
-        print("Vertex List Offset : " + hex(referenceIndices.Offset))
-        print("DIV List Count     : " + str(referenceRegions.Count))
-        print("DIV List Offset    : " + hex(referenceRegions.Offset))
-        print("BAT List Count     : " + str(referenceBat.Count))
-        print("BAT List Offset    : " + hex(referenceBat.Offset))
-        print("MSEC List Count    : " + str(referenceMsec.Count))
-        print("MSEC List Offset   : " + hex(referenceMsec.Offset))
-        print("------------------------------------------------")
+        #print("M3Div-------------------------------------------")
+        #print("Vertex List Count  : " + str(referenceIndices.Count))
+        #print("Vertex List Offset : " + hex(referenceIndices.Offset))
+        #print("DIV List Count     : " + str(referenceRegions.Count))
+        #print("DIV List Offset    : " + hex(referenceRegions.Offset))
+        #print("BAT List Count     : " + str(referenceBat.Count))
+        #print("BAT List Offset    : " + hex(referenceBat.Offset))
+        #print("MSEC List Count    : " + str(referenceMsec.Count))
+        #print("MSEC List Offset   : " + hex(referenceMsec.Offset))
+        #print("------------------------------------------------")
 
 class M3Vertex:
     VERTEX32 = 0
@@ -351,8 +349,8 @@ class MODL23:
         vertexReference = file.readReferenceEntry()
         viewReference   = file.readReferenceEntry()
         BoneLookup = file.readReferenceEntry()
-        print("BoneLookup:")
-        BoneLookup.print()
+        #print("BoneLookup:")
+        #BoneLookup.print()
         
         # Bounding Sphere
         vector0 = file.readVector()
@@ -363,23 +361,23 @@ class MODL23:
         file.skipBytes(0x3C)
         
         Attachments = file.readReferenceEntry()
-        print("Attachments")
-        Attachments.print()
+        # print("Attachments")
+        #Attachments.print()
         AttachmentLookup = file.readReferenceEntry()
-        print("Attachment Lookup")
-        AttachmentLookup.print()
+        # print("Attachment Lookup")
+        #AttachmentLookup.print()
         Lights = file.readReferenceEntry()
-        print("Lights")
-        Lights.print()
+        # print("Lights")
+        #Lights.print()
         SHBX = file.readReferenceEntry()
-        print("SHBX")
-        SHBX.print()
+        # print("SHBX")
+        #SHBX.print()
         Cameras = file.readReferenceEntry()
-        print("Cameras")
-        Cameras.print()
+        #print("Cameras")
+        #Cameras.print()
         D = file.readReferenceEntry()
-        print("D")
-        D.print()
+        #print("D")
+        #D.print()
 
         m3model.MaterialLookup = file.readReferenceById()
         m3model.Materials      = file.readReferenceById()
@@ -431,10 +429,10 @@ class MODL23:
             for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
                 faces.append((div.Indices[j], div.Indices[j+1], div.Indices[j+2]))
 
-            print(len(m3model.MaterialLookup))
-            print(len(m3model.Materials))
-            print(len(div.Regions))
-            print(len(div.Bat))
+            # print(len(m3model.MaterialLookup))
+            # print(len(m3model.Materials))
+            # print(len(div.Regions))
+            # print(len(div.Bat))
             
             if (len(div.Regions) != len(div.Bat)):
                 raise Exception("Assumption failed")
@@ -452,13 +450,14 @@ class M3ReferenceEntry:
         self.Count  = file.readUnsignedInt()
         self.Type   = file.readUnsignedInt()
         
-    def print(self):
-        print("M3ReferenceEntry--------------------------------")
-        print("Id:     " + str(self.Id))
-        print("Offset: " + hex(self.Offset))
-        print("Count:  " + hex(self.Count))
-        print("Type:   " + hex(self.Type))
-        print("------------------------------------------------")
+    # def print(self):
+        # DEBUG
+        #print("M3ReferenceEntry--------------------------------")
+        #print("Id:     " + str(self.Id))
+        #print("Offset: " + hex(self.Offset))
+        #print("Count:  " + hex(self.Count))
+        #print("Type:   " + hex(self.Type))
+        #print("------------------------------------------------")
                 
 class M3Header:
 
@@ -500,18 +499,27 @@ class M3Data:
 def createMaterial(material):
     # Create image texture from image. Change here if the snippet
     # folder is not located in you home directory.
-    realpath = os.path.abspath(material.Layers[0].Path)
-    tex = bpy.data.textures.new(material.Name)
-    tex.type = 'IMAGE'
-    tex = tex.recast_type()
-    tex.image = bpy.data.images.load(realpath)
-    tex.use_alpha = True
-    # Create shadeless material and MTex
-    mat = bpy.data.materials.new('TexMat')
-    mat.shadeless = False
-    mat.add_texture(texture = tex,
-    texture_coordinates = 'UV',
-    map_to = 'COLOR')
+    mat = bpy.data.materials.new(material.Name)
+    mat.shadeless = True
+    
+    for map_type, i in MAT.LAYER_TYPE:
+        realpath = os.path.abspath(material.Layers[i].Path)
+        tex = bpy.data.textures.new(basename(material.Layers[i].Path))
+        tex.type = 'IMAGE'
+        tex = tex.recast_type()
+        try:
+            tex.image = bpy.data.images.load(realpath)
+            tex.use_alpha = True
+
+            # Create shadeless material and MTex
+            mat.add_texture(texture = tex,texture_coordinates = 'UV', map_to = map_type)
+            print("Importing texture: %s" % realpath)
+
+        except:
+            print("Cannot load texture: %s" % realpath)
+        
+
+        
     return mat
                 
 class Submesh:
@@ -536,6 +544,7 @@ def import_m3(context, filepath, importMaterial):
     m3data = M3Data(filepath)
     name = basename(filepath)
     os.chdir(os.path.dirname(filepath))
+    #os.chdir("h:/Downloads/work")
 
     for submesh in m3data.m3Model:
         mesh = bpy.data.meshes.new(name)
@@ -556,8 +565,8 @@ def import_m3(context, filepath, importMaterial):
         ob = bpy.data.objects.new(name, mesh)
         
         if importMaterial:
-            m = createMaterial(submesh.Material)
-            ob.data.add_material(m)
+            mat = createMaterial(submesh.Material)
+            ob.data.add_material(mat)
         
         context.scene.objects.link(ob)
 
@@ -569,9 +578,9 @@ class IMPORT_OT_m3(bpy.types.Operator):
     filepath = StringProperty(name="File Path", description="Filepath used for importing the M3 file", maxlen= 1024, default= "")
     
     # Options to select import porperties
-    IMPORT_MESH      = BoolProperty(name="Import Mesh", description="Import the Model Geometry", default=True)
-    IMPORT_NORMALS   = BoolProperty(name="Import Normals", description="Import the Model Normals", default=False)
-    IMPORT_MATERIALS = BoolProperty(name="Import Material", description="Import the Model Material", default=True)
+    #IMPORT_MESH      = BoolProperty(name="Import Mesh", description="Import the Model Geometry", default=True)
+    #IMPORT_NORMALS   = BoolProperty(name="Import Normals", description="Import the Model Normals", default=False)
+    IMPORT_MATERIALS = BoolProperty(name="Create Material", description="Creates material for the model", default=False)
     
     def poll(self, context):
         return True
