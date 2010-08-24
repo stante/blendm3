@@ -88,7 +88,7 @@ class M3File:
             # In non debug should return None
             # return None
 
-    def readCHAR(self, entry):
+    def read_CHAR(self, entry):
         offset = entry.Offset
         count = entry.Count
         
@@ -102,18 +102,30 @@ class M3File:
     def readReferenceById(self):
         entry = self.readReferenceEntry()
         
+        # Check for 'null' reference, return empty list
+        if (entry.Offset == 0):
+            return []
+        
         position = self.file.tell()
         
         if (entry.Id == b'CHAR'):
-            result = self.readCHAR(entry)
-        
+            result = self.read_CHAR(entry)
         elif (entry.Id == b'LAYR'):
-            result = self.readLAYR(entry)
-            
+            result = self.read_LAYR(entry)
         elif (entry.Id == b'MAT_'):
-            result = self.readMAT(entry)
+            result = self.read_MAT(entry)
         elif (entry.Id == b'MATM'):
-            result = self.readMATM(entry)
+            result = self.read_MATM(entry)
+        elif (entry.Id == b'REGN'):
+            result = self.read_REGN(entry)
+        elif (entry.Id == b'BAT_'):
+            result = self.read_BAT(entry)
+        elif (entry.Id == b'MSEC'):
+            result = self.read_MSEC(entry)
+        elif (entry.Id == b'U16_'):
+            result = self.readIndices(entry)
+        elif (entry.Id == b'DIV_'):
+            result = self.read_DIV(entry)
         else:
             #raise Exception('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
             print('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
@@ -124,7 +136,7 @@ class M3File:
         
         return result
     
-    def readMATM(self, reference):
+    def read_MATM(self, reference):
         matm = []
         count = reference.Count
         offset = reference.Offset
@@ -136,7 +148,7 @@ class M3File:
             
         return matm
     
-    def readLAYR(self, reference):
+    def read_LAYR(self, reference):
         layr = 0
         count  = reference.Count
         offset = reference.Offset
@@ -160,7 +172,7 @@ class M3File:
             
         return faces
     
-    def readRegions(self, reference):
+    def read_REGN(self, reference):
         regions = []
         count = reference.Count
         offset = reference.Offset
@@ -168,11 +180,11 @@ class M3File:
         self.file.seek(offset)
         
         for i in range(count):
-            regions.append(M3Region(self))
+            regions.append(REGN(self))
             
         return regions
         
-    def readBat(self, reference):
+    def read_BAT(self, reference):
         bat    = []
         count  = reference.Count
         offset = reference.Offset
@@ -184,10 +196,10 @@ class M3File:
             
         return bat
     
-    def readMsec(self, reference):
+    def read_MSEC(self, reference):
         return 0
         
-    def readMAT(self, reference):
+    def read_MAT(self, reference):
         mat = []
         count = reference.Count
         offset = reference.Offset
@@ -198,14 +210,27 @@ class M3File:
             mat.append(MAT(self))
             
         return mat
+        
+    def read_DIV(self, reference):
+        div = []
+        count = reference.Count
+        offset = reference.Offset
+        
+        self.file.seek(offset)
+        
+        for i in range(count):
+            div.append(DIV(self))
+            
+        return div
 
 class MATM:
+    TYPE = { 'MAT':1, 'DIS':2, 'CMP':3, 'TER':4, 'VOL':5 }
     
     def __init__(self, file):
         self.MaterialType  = file.readUnsignedInt()
         self.MaterialIndex = file.readUnsignedInt()
         
-        if (self.MaterialType != 1):
+        if (self.MaterialType != MATM.TYPE['MAT']):
             print("Unsupported material type")
         
 class MAT:
@@ -266,7 +291,7 @@ class M3Reference:
         self.Index = file.readUnsignedInt()
         self.Flags = file.readUnsignedInt()
         
-class M3Region:
+class REGN:
 
     def __init__(self, file):
         self.D1           = file.readUnsignedInt()
@@ -281,18 +306,14 @@ class M3Region:
         self.s1           = file.readArrayUnsignedShort(3)
 
 # TODO read bat and msec		
-class M3Div:
+class DIV:
 
     def __init__(self, file):
-        referenceIndices = file.readReferenceEntry()
-        referenceRegions = file.readReferenceEntry()
-        referenceBat     = file.readReferenceEntry()
-        referenceMsec    = file.readReferenceEntry()
-
-        self.Indices = file.readIndices(referenceIndices)
-        self.Regions = file.readRegions(referenceRegions)
-        self.Bat     = file.readBat(referenceBat)
-        self.Msec    = file.readMsec(referenceMsec)
+        print("Read Indices")
+        self.Indices = file.readReferenceById()
+        self.Regions = file.readReferenceById()
+        self.Bat     = file.readReferenceById()
+        self.Msec    = file.readReferenceById()
 
         #print("M3Div-------------------------------------------")
         #print("Vertex List Count  : " + str(referenceIndices.Count))
@@ -342,45 +363,36 @@ class MODL23:
         self.Materials = []
         
     def read(file):
-        m3model = MODL23()
+        m3model       = MODL23()
+        
         file.skipBytes(0x60)
-        m3model.Flags = file.readUnsignedInt()
-
+       
+        m3model.Flags   = file.readUnsignedInt()
         vertexReference = file.readReferenceEntry()
-        viewReference   = file.readReferenceEntry()
-        BoneLookup = file.readReferenceEntry()
-        #print("BoneLookup:")
-        #BoneLookup.print()
+        m3model.Div     = file.readReferenceById()[0] # expecting only one Div Entry
+        m3model.Bones   = file.readReferenceById()
         
         # Bounding Sphere
         vector0 = file.readVector()
         vector1 = file.readVector()
-        radius = file.readFloat()
-        flags = file.readUnsignedInt()
+        radius  = file.readFloat()
+        flags   = file.readUnsignedInt()
         
         file.skipBytes(0x3C)
         
-        Attachments = file.readReferenceEntry()
-        # print("Attachments")
-        #Attachments.print()
-        AttachmentLookup = file.readReferenceEntry()
-        # print("Attachment Lookup")
-        #AttachmentLookup.print()
-        Lights = file.readReferenceEntry()
-        # print("Lights")
-        #Lights.print()
-        SHBX = file.readReferenceEntry()
-        # print("SHBX")
-        #SHBX.print()
-        Cameras = file.readReferenceEntry()
-        #print("Cameras")
-        #Cameras.print()
-        D = file.readReferenceEntry()
-        #print("D")
-        #D.print()
-
-        m3model.MaterialLookup = file.readReferenceById()
-        m3model.Materials      = file.readReferenceById()
+        m3model.Attachments      = file.readReferenceById()
+        m3model.AttachmentLookup = file.readReferenceById()
+        m3model.Lights           = file.readReferenceById()
+        m3model.SHBX             = file.readReferenceById()
+        m3model.Cameras          = file.readReferenceById()
+        m3model.D                = file.readReferenceById()
+        m3model.MaterialLookup   = file.readReferenceById()
+        m3model.Materials        = file.readReferenceById()
+        m3model.Displacement     = file.readReferenceById()
+        m3model.CMP              = file.readReferenceById()
+        m3model.TER              = file.readReferenceById()
+        m3model.VOL              = file.readReferenceById()
+        
         
         # Reading Vertices
         count = 0
@@ -412,33 +424,40 @@ class MODL23:
         for i in range(count):
              m3model.Vertices.append(M3Vertex(file, type, m3model.Flags))
         
-        # Reading DIV
-        file.seek(viewReference.Offset)
-        div = M3Div(file)
-        
         submeshes = []
-        
+        Div = m3model.Div
         # Reading DIV.REGN
-        for i, regn in enumerate(div.Regions):
-            offset = regn.OffsetVert
-            number = regn.NumVert
+#        for i, regn in enumerate(Div.Regions):
+#            offset = regn.OffsetVert
+#            number = regn.NumVert
             
-            vertices = m3model.Vertices[offset:offset + number]
+#            vertices = m3model.Vertices[offset:offset + number]
+#            faces = []
+            
+#           for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
+#                faces.append((Div.Indices[j], Div.Indices[j+1], Div.Indices[j+2]))
+            
+ #           if (len(Div.Regions) != len(Div.Bat)):
+ #               raise Exception("Assumption failed")
+            # Dangerous: assumes that for every REGN there is an BAT. Also assumes they are referenced
+            # consequtivly in reverese order!
+#          submeshes.append(Submesh(vertices, faces, m3model.Materials[m3model.MaterialLookup[Div.Bat[len(Div.Regions)- (i+1)].MAT_Index].MaterialIndex]))
+
+        for i, bat in enumerate(Div.Bat):
+            regn = Div.Regions[bat.REGN_Index]
+            
+            offset = regn.OffsetVert
+            count  = regn.NumVert
+            
+            vertices = m3model.Vertices[offset:offset + count]
             faces = []
             
             for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
-                faces.append((div.Indices[j], div.Indices[j+1], div.Indices[j+2]))
-
-            # print(len(m3model.MaterialLookup))
-            # print(len(m3model.Materials))
-            # print(len(div.Regions))
-            # print(len(div.Bat))
+                faces.append((Div.Indices[j], Div.Indices[j+1], Div.Indices[j+2]))
+                
+            submesh = Submesh(vertices, faces, m3model.Materials[m3model.MaterialLookup[bat.MAT_Index].MaterialIndex])
+            submeshes.append(submesh)
             
-            if (len(div.Regions) != len(div.Bat)):
-                raise Exception("Assumption failed")
-            # Dangerous: assumes that for every REGN there is an BAT. Also assumes they are referenced
-            # consequtivly in reverese order!
-            submeshes.append(Submesh(vertices, faces, m3model.Materials[m3model.MaterialLookup[div.Bat[len(div.Regions)- (i+1)].MAT_Index].MaterialIndex]))
         
         return submeshes
                     
@@ -543,8 +562,9 @@ class Submesh:
 def import_m3(context, filepath, importMaterial):
     m3data = M3Data(filepath)
     name = basename(filepath)
-    os.chdir(os.path.dirname(filepath))
+    #os.chdir(os.path.dirname(filepath))
     #os.chdir("h:/Downloads/work")
+    os.chdir("C:/Users/alex/Documents")
 
     for submesh in m3data.m3Model:
         mesh = bpy.data.meshes.new(name)
