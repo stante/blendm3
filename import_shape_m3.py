@@ -519,16 +519,17 @@ def createMaterial(material):
     # Create image texture from image. Change here if the snippet
     # folder is not located in you home directory.
     mat = bpy.data.materials.new(material.Name)
-    mat.shadeless = True
+    # mat.shadeless = True
     
     for map_type, i in MAT.LAYER_TYPE:
         realpath = os.path.abspath(material.Layers[i].Path)
         tex = bpy.data.textures.new(basename(material.Layers[i].Path))
         tex.type = 'IMAGE'
         tex = tex.recast_type()
+
         try:
             tex.image = bpy.data.images.load(realpath)
-            tex.use_alpha = True
+            # tex.use_alpha = True
 
             # Create shadeless material and MTex
             mat.add_texture(texture = tex,texture_coordinates = 'UV', map_to = map_type)
@@ -587,6 +588,10 @@ def import_m3(context, filepath, importMaterial):
         if importMaterial:
             mat = createMaterial(submesh.Material)
             ob.data.add_material(mat)
+            
+        for f in ob.data.faces:
+            print(f.material_index)
+            print(f.index)
         
         context.scene.objects.link(ob)
 
