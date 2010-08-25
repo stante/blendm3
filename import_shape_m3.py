@@ -29,6 +29,7 @@ from os.path import basename
 
 # M3 File representation encapsulating file handle
 class M3File:
+
     def __init__(self, filepath):
         self.file = open(filepath, "rb")
         self.ReferenceTable = []
@@ -39,21 +40,21 @@ class M3File:
     def seek(self, position):
         self.file.seek(position, 0)
         
-    def skipBytes(self, count):
+    def skip_bytes(self, count):
         self.file.seek(count, 1)
 
-    def readBytes(self, count):
+    def read_bytes(self, count):
         return unpack_from("<" + str(count) + "B", self.file.read(calcsize("<" + str(count) + "B")))
     
-    def readUnsignedInt(self):
+    def read_uint(self):
         (unsignedInt, ) = unpack_from("<I", self.file.read(calcsize("<I")))
         return unsignedInt
         
-    def readUnsignedShort(self):
+    def read_ushort(self):
         (unsignedShort, ) = unpack_from("<H", self.file.read(calcsize("<H")))
         return unsignedShort
         
-    def readFloat(self):
+    def read_float(self):
         (unsignedShort, ) = unpack_from("<f", self.file.read(calcsize("<f")))
         return unsignedShort
         
@@ -64,21 +65,18 @@ class M3File:
     def readArraySignedShort(self, count):
         return unpack_from("<" + str(count) + "h", self.file.read(calcsize("<" + str(count) + "h")))
         
-    def readVector(self):
+    def read_vector(self):
         return unpack_from("<3f", self.file.read(calcsize("<3f")))
         
-    def readString(self, count):
+    def read_string(self, count):
         (string, ) = unpack_from("<" + str(count) + "s", self.file.read(calcsize("<" + str(count) + "s")))
         return string
         
-    def readId(self):
-        id = self.readString(4)
+    def read_id(self):
+        id = self.read_string(4)
         return id[::-1]
         
-    def readM3Reference(self):
-        return M3Reference(self)
-        
-    def readReferenceEntry(self):
+    def read_reference_entry(self):
         ref = M3Reference(self)
         
         if (ref.Index != 0):
@@ -93,14 +91,14 @@ class M3File:
         count = entry.Count
         
         self.file.seek(offset)
-        string = self.readString(count)
+        string = self.read_string(count)
         string = string[0:-1].decode("ascii")
         return string
         
     
         
     def readReferenceById(self):
-        entry = self.readReferenceEntry()
+        entry = self.read_reference_entry()
         
         # Check for 'null' reference, return empty list
         if (entry.Offset == 0):
@@ -168,7 +166,7 @@ class M3File:
         self.file.seek(offset)
         
         for i in range(count):
-            faces.append(self.readUnsignedShort())
+            faces.append(self.read_ushort())
             
         return faces
     
@@ -223,14 +221,14 @@ class M3File:
             
         return div
 
+MATM_TYPE = {'MAT':1, 'DIS':2, 'CMP':3, 'TER':4, 'VOL':5}
 class MATM:
-    TYPE = { 'MAT':1, 'DIS':2, 'CMP':3, 'TER':4, 'VOL':5 }
     
     def __init__(self, file):
-        self.MaterialType  = file.readUnsignedInt()
-        self.MaterialIndex = file.readUnsignedInt()
+        self.MaterialType  = file.read_uint()
+        self.MaterialIndex = file.read_uint()
         
-        if (self.MaterialType != MATM.TYPE['MAT']):
+        if (self.MaterialType != MATM_TYPE['MAT']):
             print("Unsupported material type")
         
 class MAT:
@@ -238,16 +236,16 @@ class MAT:
     def __init__(self, file):
         # Read chunk
         self.Name = file.readReferenceById()
-        self.D1 = file.readUnsignedInt()
-        self.Flags = file.readUnsignedInt()
-        self.BlendMode = file.readUnsignedInt()
-        self.Priority = file.readUnsignedInt()
-        self.D2 = file.readUnsignedInt()
-        self.Specularity = file.readFloat()
-        self.F1 = file.readFloat()
-        self.CutoutThreshold = file.readUnsignedInt()
-        self.SpecularMultiplier = file.readFloat()
-        self.EmissiveMultiplier = file.readFloat()
+        self.D1 = file.read_uint()
+        self.Flags = file.read_uint()
+        self.BlendMode = file.read_uint()
+        self.Priority = file.read_uint()
+        self.D2 = file.read_uint()
+        self.Specularity = file.read_float()
+        self.F1 = file.read_float()
+        self.CutoutThreshold = file.read_uint()
+        self.SpecularMultiplier = file.read_float()
+        self.EmissiveMultiplier = file.read_float()
         
         self.Layers = []
         
@@ -256,29 +254,29 @@ class MAT:
             # if self.Layers[i] != None:
                 # print("%s: %s" % (i, self.Layers[i].Path))
             
-        self.D3 = file.readUnsignedInt()
-        self.LayerBlend = file.readUnsignedInt()
-        self.EmissiveBlend = file.readUnsignedInt()
-        self.D4 = file.readUnsignedInt()
-        self.SpecularType = file.readUnsignedInt()
+        self.D3 = file.read_uint()
+        self.LayerBlend = file.read_uint()
+        self.EmissiveBlend = file.read_uint()
+        self.D4 = file.read_uint()
+        self.SpecularType = file.read_uint()
         
-        file.skipBytes(2*0x14)
+        file.skip_bytes(2*0x14)
                 
 class LAYR:
 
     def __init__(self, file):
-        file.skipBytes(4)
+        file.skip_bytes(4)
         self.Path = file.readReferenceById()
         
         
 class BAT:
     
     def __init__(self, file):
-        file.skipBytes(4)
-        self.REGN_Index = file.readUnsignedShort()
-        file.skipBytes(4)
-        self.MAT_Index = file.readUnsignedShort()
-        file.skipBytes(2)
+        file.skip_bytes(4)
+        self.REGN_Index = file.read_ushort()
+        file.skip_bytes(4)
+        self.MAT_Index = file.read_ushort()
+        file.skip_bytes(2)
         #print("BAT---------------------------------------------")
         #print("REGN Index : " + str(self.REGN_Index))
         #print("MAT Index  : " + str(self.MAT_Index))
@@ -287,22 +285,22 @@ class BAT:
 class M3Reference:
 
     def __init__(self, file):
-        self.Count = file.readUnsignedInt()
-        self.Index = file.readUnsignedInt()
-        self.Flags = file.readUnsignedInt()
+        self.Count = file.read_uint()
+        self.Index = file.read_uint()
+        self.Flags = file.read_uint()
         
 class REGN:
 
     def __init__(self, file):
-        self.D1           = file.readUnsignedInt()
-        self.D2           = file.readUnsignedInt()
-        self.OffsetVert   = file.readUnsignedInt()
-        self.NumVert      = file.readUnsignedInt()
-        self.OffsetFaces  = file.readUnsignedInt()
-        self.NumFaces     = file.readUnsignedInt()
-        self.BoneCount    = file.readUnsignedShort()
-        self.IndBone      = file.readUnsignedShort()
-        self.NumBone      = file.readUnsignedShort()
+        self.D1           = file.read_uint()
+        self.D2           = file.read_uint()
+        self.OffsetVert   = file.read_uint()
+        self.NumVert      = file.read_uint()
+        self.OffsetFaces  = file.read_uint()
+        self.NumFaces     = file.read_uint()
+        self.BoneCount    = file.read_ushort()
+        self.IndBone      = file.read_ushort()
+        self.NumBone      = file.read_ushort()
         self.s1           = file.readArrayUnsignedShort(3)
 
 # TODO read bat and msec		
@@ -325,22 +323,19 @@ class DIV:
         #print("MSEC List Count    : " + str(referenceMsec.Count))
         #print("MSEC List Offset   : " + hex(referenceMsec.Offset))
         #print("------------------------------------------------")
-
+# VERTEX_TYPE stores the amount of UV per vertex
+VERTEX_TYPE = {'VERTEX32':1, 'VERTEX36':2, 'VERTEX40':3, 'VERTEX44':4}
 class M3Vertex:
-    VERTEX32 = 0
-    VERTEX36 = 1
-    VERTEX40 = 2
-    VERTEX44 = 3
     
     def __init__(self, file, type, flags):
-        self.Position   = file.readVector()
-        self.BoneWeight = file.readBytes(4)
-        self.BoneIndex  = file.readBytes(4)
-        self.Normal     = file.readBytes(4)
+        self.Position   = file.read_vector()
+        self.BoneWeight = file.read_bytes(4)
+        self.BoneIndex  = file.read_bytes(4)
+        self.Normal     = file.read_bytes(4)
         self.UV         = []
 
         # Vertex type specifies how many UV entries the Vertex format contains
-        for i in range(type + 1):
+        for i in range(VERTEX_TYPE[type]):
             (u, v) = file.readArraySignedShort(2)
             u = u / 2048.0
             v = v / 2048.0
@@ -350,9 +345,9 @@ class M3Vertex:
         
         # Further investigation of this flag needed
         if ((flags & 0x200) != 0):
-            file.skipBytes(4)
+            file.skip_bytes(4)
             
-        self.Tangent    = file.readBytes(4)
+        self.Tangent    = file.read_bytes(4)
 
 class MODL23:
     
@@ -365,20 +360,20 @@ class MODL23:
     def read(file):
         m3model       = MODL23()
         
-        file.skipBytes(0x60)
+        file.skip_bytes(0x60)
        
-        m3model.Flags   = file.readUnsignedInt()
-        vertexReference = file.readReferenceEntry()
+        m3model.Flags   = file.read_uint()
+        vertexReference = file.read_reference_entry()
         m3model.Div     = file.readReferenceById()[0] # expecting only one Div Entry
         m3model.Bones   = file.readReferenceById()
         
         # Bounding Sphere
-        vector0 = file.readVector()
-        vector1 = file.readVector()
-        radius  = file.readFloat()
-        flags   = file.readUnsignedInt()
+        vector0 = file.read_vector()
+        vector1 = file.read_vector()
+        radius  = file.read_float()
+        flags   = file.read_uint()
         
-        file.skipBytes(0x3C)
+        file.skip_bytes(0x3C)
         
         m3model.Attachments      = file.readReferenceById()
         m3model.AttachmentLookup = file.readReferenceById()
@@ -400,19 +395,19 @@ class MODL23:
     
         if ((m3model.Flags & 0x100000) != 0):   
             count = vertexReference.Count // 44
-            type  = M3Vertex.VERTEX44
+            type  = 'VERTEX44'
                 
         elif ((m3model.Flags & 0x80000) != 0):
             count = vertexReference.Count // 40
-            type  = M3Vertex.VERTEX40
+            type  = 'VERTEX40'
 
         elif ((m3model.Flags & 0x40000) != 0):
             count = vertexReference.Count // 36
-            type  = M3Vertex.VERTEX36
+            type  = 'VERTEX36'
 
         elif ((m3model.Flags & 0x20000) != 0):
             count = vertexReference.Count // 32
-            type  = M3Vertex.VERTEX32            
+            type  = 'VERTEX32'
                 
         else:
             raise Exception('import_m3: !ERROR! Unsupported vertex format. Flags: %s' % hex(m3model.Flags))
@@ -426,22 +421,6 @@ class MODL23:
         
         submeshes = []
         Div = m3model.Div
-        # Reading DIV.REGN
-#        for i, regn in enumerate(Div.Regions):
-#            offset = regn.OffsetVert
-#            number = regn.NumVert
-            
-#            vertices = m3model.Vertices[offset:offset + number]
-#            faces = []
-            
-#           for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
-#                faces.append((Div.Indices[j], Div.Indices[j+1], Div.Indices[j+2]))
-            
- #           if (len(Div.Regions) != len(Div.Bat)):
- #               raise Exception("Assumption failed")
-            # Dangerous: assumes that for every REGN there is an BAT. Also assumes they are referenced
-            # consequtivly in reverese order!
-#          submeshes.append(Submesh(vertices, faces, m3model.Materials[m3model.MaterialLookup[Div.Bat[len(Div.Regions)- (i+1)].MAT_Index].MaterialIndex]))
 
         for i, bat in enumerate(Div.Bat):
             regn = Div.Regions[bat.REGN_Index]
@@ -464,10 +443,10 @@ class MODL23:
 class M3ReferenceEntry:
     
     def __init__(self, file):
-        self.Id     = file.readId()
-        self.Offset = file.readUnsignedInt()
-        self.Count  = file.readUnsignedInt()
-        self.Type   = file.readUnsignedInt()
+        self.Id     = file.read_id()
+        self.Offset = file.read_uint()
+        self.Count  = file.read_uint()
+        self.Type   = file.read_uint()
         
     # def print(self):
         # DEBUG
@@ -481,38 +460,31 @@ class M3ReferenceEntry:
 class M3Header:
 
     def __init__(self, file):
-        self.Id                   = file.readId()
-        self.ReferenceTableOffset = file.readUnsignedInt()
-        self.ReferenceTableCount  = file.readUnsignedInt()
-        self.ModelCount           = file.readUnsignedInt()
-        self.ModelIndex           = file.readUnsignedInt()
+        self.id                   = file.read_id()
         
-        if self.Id != b'MD34':
-            raise Exception('import_m3: !ERROR! Unsupported file format')
+        if self.id != b'MD34':
+            raise Exception('import_m3: !ERROR! Unsupported file format: %s' % self.id)
+            
+        reference_table_offset = file.read_uint()
+        reference_table_count  = file.read_uint()
+        model_count            = file.read_uint()
+        model_index            = file.read_uint()
         
-        count  = self.ReferenceTableCount
-        offset = self.ReferenceTableOffset
+        file.seek(reference_table_offset)
         
-        file.seek(offset)
-        
-        for i in range(count):
+        # Creating reference table
+        for i in range(reference_table_count):
             file.ReferenceTable.append(M3ReferenceEntry(file))
-        
-class M3Data:
-
-    def __init__(self, filepath):
-        file = M3File(filepath)
-        
-        # Reading file header
-        self.m3Header = M3Header(file)
-        
-        # Reading model
-        modelReference = file.ReferenceTable[self.m3Header.ModelIndex]
+            
+        # Creating models
+        modelReference = file.ReferenceTable[model_index]
         
         if (modelReference.Type != 23):
             raise Exception('import_m3: !ERROR! Unsupported model format: %s' % hex(modelReference.Type))
-        
+
         file.seek(modelReference.Offset)
+        
+        assert(modelReference.Count == 1)
         self.m3Model = MODL23.read(file)
         
 def createMaterial(material):
@@ -561,19 +533,23 @@ class Submesh:
             self.UV1.append(((vertices[f[0]].UV[0]), (vertices[f[1]].UV[0]), (vertices[f[2]].UV[0])))
 
 def import_m3(context, filepath, importMaterial):
-    m3data = M3Data(filepath)
+    file = M3File(filepath)
+        
+    # Reading file header
+    m3Header = M3Header(file)
+
     name = basename(filepath)
     #os.chdir(os.path.dirname(filepath))
     #os.chdir("h:/Downloads/work")
     os.chdir("C:/Users/alex/Documents")
 
-    for submesh in m3data.m3Model:
+    for submesh in m3Header.m3Model:
         mesh = bpy.data.meshes.new(name)
         mesh.from_pydata(submesh.Vertices, [], submesh.Faces)
         
         mesh.add_uv_texture()
         uvtex = mesh.uv_textures[0]
-        uvtex.name = "foo"
+        uvtex.name = "UVLayer1"
         
         for i, uv in enumerate(submesh.UV1):
             data = uvtex.data[i]
@@ -589,9 +565,9 @@ def import_m3(context, filepath, importMaterial):
             mat = createMaterial(submesh.Material)
             ob.data.add_material(mat)
             
-        for f in ob.data.faces:
-            print(f.material_index)
-            print(f.index)
+        #for f in ob.data.faces:
+        #    print(f.material_index)
+        #    print(f.index)
         
         context.scene.objects.link(ob)
 
