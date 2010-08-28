@@ -49,7 +49,11 @@ class M3File:
     def read_uint(self):
         (unsignedInt, ) = unpack_from("<I", self.file.read(calcsize("<I")))
         return unsignedInt
-        
+
+    def read_short(self):
+        (short, ) = unpack_from("<h", self.file.read(calcsize("<h")))
+        return short
+    
     def read_ushort(self):
         (unsignedShort, ) = unpack_from("<H", self.file.read(calcsize("<H")))
         return unsignedShort
@@ -97,7 +101,7 @@ class M3File:
         
     
         
-    def readReferenceById(self):
+    def read_reference_by_id(self):
         entry = self.read_reference_entry()
         
         # Check for 'null' reference, return empty list
@@ -124,6 +128,10 @@ class M3File:
             result = self.readIndices(entry)
         elif (entry.Id == b'DIV_'):
             result = self.read_DIV(entry)
+        elif (entry.Id == b'STC_'):
+            result = self.read_STC(entry)
+        elif (entry.Id == b'U32_'):
+            result = self.read_U32(entry)
         else:
             #raise Exception('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
             print('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
@@ -133,6 +141,18 @@ class M3File:
         self.file.seek(position)
         
         return result
+        
+    def read_STC(self, reference):
+        stc = []
+        count  = reference.Count
+        offset = reference.Offset
+        
+        self.file.seek(offset)
+        
+        for i in range(count):
+            stc.append(STC(self))
+            
+        return stc
     
     def read_MATM(self, reference):
         matm = []
@@ -220,7 +240,55 @@ class M3File:
             div.append(DIV(self))
             
         return div
+        
+    def read_U32(self, reference):
+        u32 = []
+        count  = reference.Count
+        offset = reference.Offset
+        
+        self.file.seek(offset)
+        
+        for i in range(count):
+            u32.append(self.read_uint)
+            
+        return u32
+        
+class BONE:
+    
+    def __init__(self, file):
+        # TODO all signed!!!
+        self.d1     = file.read_uint()
+        self.name   = file.read_reference_by_id()
+        self.flags  = file.read_uint()
+        self.parent = file.read_short()
+        self.s1     = file.read_short()
+        
+        self.floats = []
+        for i in range(34):
+            floats.append(file.read_float())
 
+class STC:
+    
+    def __init__(self, file):
+        self.name      = file.read_reference_by_id()
+        self.d1        = file.read_uint()
+        self.indSTC    = file.read_uint()
+        self.animid    = file.read_reference_by_id()
+        self.animindex = file.read_reference_by_id()
+        self.d2        = file.read_uint()
+        
+        self.seq_data = []
+        for i in range(13):
+            print("--")
+            self.seq_data.append(file.read_reference_by_id())
+            
+
+        print("STC-------------------------------")
+        print("Name:   %s" % self.name)
+        print("IndStc: %d" % self.indSTC)
+        print("----------------------------------")
+
+        
 MATM_TYPE = {'MAT':1, 'DIS':2, 'CMP':3, 'TER':4, 'VOL':5}
 class MATM:
     
@@ -232,10 +300,10 @@ class MATM:
             print("Unsupported material type")
         
 class MAT:
-    LAYER_TYPE = [('COLOR', 0), ('SPECULARITY', 2), ('NORMAL', 9)]
+    LAYER_TYPE = [('COLOR', 0), ('SPECULARITY', 2), ('COLOR', 3), ('NORMAL', 9)]
     def __init__(self, file):
         # Read chunk
-        self.Name = file.readReferenceById()
+        self.Name = file.read_reference_by_id()
         self.D1 = file.read_uint()
         self.Flags = file.read_uint()
         self.BlendMode = file.read_uint()
@@ -250,9 +318,9 @@ class MAT:
         self.Layers = []
         
         for i in range(13):
-            self.Layers.append(file.readReferenceById())
-            # if self.Layers[i] != None:
-                # print("%s: %s" % (i, self.Layers[i].Path))
+            self.Layers.append(file.read_reference_by_id())
+            #if self.Layers[i] != None:
+            #    print("%s: %s" % (i, self.Layers[i].Path))
             
         self.D3 = file.read_uint()
         self.LayerBlend = file.read_uint()
@@ -266,7 +334,7 @@ class LAYR:
 
     def __init__(self, file):
         file.skip_bytes(4)
-        self.Path = file.readReferenceById()
+        self.Path = file.read_reference_by_id()
         
         
 class BAT:
@@ -308,10 +376,10 @@ class DIV:
 
     def __init__(self, file):
         print("Read Indices")
-        self.Indices = file.readReferenceById()
-        self.Regions = file.readReferenceById()
-        self.Bat     = file.readReferenceById()
-        self.Msec    = file.readReferenceById()
+        self.Indices = file.read_reference_by_id()
+        self.Regions = file.read_reference_by_id()
+        self.Bat     = file.read_reference_by_id()
+        self.Msec    = file.read_reference_by_id()
 
         #print("M3Div-------------------------------------------")
         #print("Vertex List Count  : " + str(referenceIndices.Count))
@@ -358,14 +426,19 @@ class MODL23:
         self.Materials = []
         
     def read(file):
-        m3model       = MODL23()
+        m3model         = MODL23()
+        m3model.name    = file.read_reference_by_id()
+        m3model.version = file.read_uint()
+        m3model.SEQS    = file.read_reference_by_id()
+        m3model.STC     = file.read_reference_by_id()
+        m3model.STG     = file.read_reference_by_id()
         
-        file.skip_bytes(0x60)
+        file.skip_bytes(0x2c)
        
         m3model.Flags   = file.read_uint()
         vertexReference = file.read_reference_entry()
-        m3model.Div     = file.readReferenceById()[0] # expecting only one Div Entry
-        m3model.Bones   = file.readReferenceById()
+        m3model.Div     = file.read_reference_by_id()[0] # expecting only one Div Entry
+        m3model.Bones   = file.read_reference_by_id()
         
         # Bounding Sphere
         vector0 = file.read_vector()
@@ -375,18 +448,18 @@ class MODL23:
         
         file.skip_bytes(0x3C)
         
-        m3model.Attachments      = file.readReferenceById()
-        m3model.AttachmentLookup = file.readReferenceById()
-        m3model.Lights           = file.readReferenceById()
-        m3model.SHBX             = file.readReferenceById()
-        m3model.Cameras          = file.readReferenceById()
-        m3model.D                = file.readReferenceById()
-        m3model.MaterialLookup   = file.readReferenceById()
-        m3model.Materials        = file.readReferenceById()
-        m3model.Displacement     = file.readReferenceById()
-        m3model.CMP              = file.readReferenceById()
-        m3model.TER              = file.readReferenceById()
-        m3model.VOL              = file.readReferenceById()
+        m3model.Attachments      = file.read_reference_by_id()
+        m3model.AttachmentLookup = file.read_reference_by_id()
+        m3model.Lights           = file.read_reference_by_id()
+        m3model.SHBX             = file.read_reference_by_id()
+        m3model.Cameras          = file.read_reference_by_id()
+        m3model.D                = file.read_reference_by_id()
+        m3model.MaterialLookup   = file.read_reference_by_id()
+        m3model.Materials        = file.read_reference_by_id()
+        m3model.Displacement     = file.read_reference_by_id()
+        m3model.CMP              = file.read_reference_by_id()
+        m3model.TER              = file.read_reference_by_id()
+        m3model.VOL              = file.read_reference_by_id()
         
         
         # Reading Vertices
@@ -494,18 +567,25 @@ def createMaterial(material):
     # mat.shadeless = True
     
     for map_type, i in MAT.LAYER_TYPE:
-        realpath = os.path.abspath(material.Layers[i].Path)
-        tex = bpy.data.textures.new(basename(material.Layers[i].Path))
+        subpath = material.Layers[i].Path
+        
+        # Currently ignore all 'empty' paths
+        # according to documentation even this paths need a certain kind of treatment
+        if subpath == '':
+            continue
+        
+        realpath = os.path.abspath(subpath)
+        tex = bpy.data.textures.new(basename(subpath))
         tex.type = 'IMAGE'
         tex = tex.recast_type()
-
+        
         try:
             tex.image = bpy.data.images.load(realpath)
             # tex.use_alpha = True
 
             # Create shadeless material and MTex
             mat.add_texture(texture = tex,texture_coordinates = 'UV', map_to = map_type)
-            print("Importing texture: %s" % realpath)
+            print("Importing texture: [%d] %s" % (i, realpath))
 
         except:
             print("Cannot load texture: %s" % realpath)
@@ -539,11 +619,13 @@ def import_m3(context, filepath, importMaterial):
     m3Header = M3Header(file)
 
     name = basename(filepath)
+    #name = m3Header.m3Model.name
     #os.chdir(os.path.dirname(filepath))
     #os.chdir("h:/Downloads/work")
     os.chdir("C:/Users/alex/Documents")
 
     for submesh in m3Header.m3Model:
+        #name = submesh
         mesh = bpy.data.meshes.new(name)
         mesh.from_pydata(submesh.Vertices, [], submesh.Faces)
         
