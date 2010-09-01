@@ -26,6 +26,8 @@ import os
 from bpy.props import *
 from struct import unpack_from, calcsize
 from os.path import basename
+from mathutils import Matrix
+from mathutils import Vector
 
 # M3 File representation encapsulating file handle
 class M3File:
@@ -71,7 +73,10 @@ class M3File:
         
     def read_vector(self):
         return unpack_from("<3f", self.file.read(calcsize("<3f")))
-        
+    
+    def read_hvector(self):
+        return unpack_from("<4f", self.file.read(calcsize("<4f")))
+    
     def read_string(self, count):
         (string, ) = unpack_from("<" + str(count) + "s", self.file.read(calcsize("<" + str(count) + "s")))
         return string
@@ -105,6 +110,8 @@ class M3File:
         entry = self.read_reference_entry()
         
         # Check for 'null' reference, return empty list
+        print(entry.Id)
+
         if (entry.Offset == 0):
             return []
         
@@ -132,6 +139,10 @@ class M3File:
             result = self.read_STC(entry)
         elif (entry.Id == b'U32_'):
             result = self.read_U32(entry)
+        elif (entry.Id == b'BONE'):
+            result = self.read_BONE(entry)
+        elif (entry.Id == b'IREF'):
+            result = self.read_IREF(entry)
         else:
             #raise Exception('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
             print('import_m3: !ERROR! Unsupported reference format. Format: %s Count: %s' % (str(entry.Id), str(entry.Count)))
@@ -253,6 +264,45 @@ class M3File:
             
         return u32
         
+    def read_BONE(self, reference):
+        bones = []
+        
+        count  = reference.Count
+        offset = reference.Offset
+        
+        self.file.seek(offset)
+        
+        for i in range(count):
+            bones.append(BONE(self))
+            
+        return bones
+        
+    def read_IREF(self, reference):
+        matrices = []
+        
+        count  = reference.Count
+        offset = reference.Offset
+        
+        self.file.seek(offset)
+        
+        for i in range(count):
+            matrices.append(IREF(self))
+            
+        return matrices
+            
+class IREF:
+    
+    def __init__(self, file):
+        v1 = file.read_hvector()
+        v2 = file.read_hvector()
+        v3 = file.read_hvector()
+        v4 = file.read_hvector()
+        
+        self.matrix = Matrix(v1, v2, v3, v4).transpose()
+        
+        
+        print(self.matrix)
+        
 class BONE:
     
     def __init__(self, file):
@@ -265,7 +315,9 @@ class BONE:
         
         self.floats = []
         for i in range(34):
-            floats.append(file.read_float())
+            self.floats.append(file.read_float())
+            
+        print("Name: %s, Parent: %d" % (self.name, self.parent))
 
 class STC:
     
@@ -433,12 +485,15 @@ class MODL23:
         m3model.STC     = file.read_reference_by_id()
         m3model.STG     = file.read_reference_by_id()
         
-        file.skip_bytes(0x2c)
-       
+        file.skip_bytes(0x1c)
+        print("Reading Bones")
+        m3model.Bones   = file.read_reference_by_id()
+        print("End reading bones")
+        m3model.d5      = file.read_uint()
         m3model.Flags   = file.read_uint()
         vertexReference = file.read_reference_entry()
         m3model.Div     = file.read_reference_by_id()[0] # expecting only one Div Entry
-        m3model.Bones   = file.read_reference_by_id()
+        m3model.BonesI  = file.read_reference_by_id()
         
         # Bounding Sphere
         vector0 = file.read_vector()
@@ -459,8 +514,34 @@ class MODL23:
         m3model.Displacement     = file.read_reference_by_id()
         m3model.CMP              = file.read_reference_by_id()
         m3model.TER              = file.read_reference_by_id()
-        m3model.VOL              = file.read_reference_by_id()
-        
+        #m3model.VOL              = file.read_reference_by_id()
+        #m3model.d21              = file.read_uint()
+        #m3model.d22              = file.read_uint()
+        #m3model.CREP             = file.read_reference_by_id()
+        #m3model.PAR              = file.read_reference_by_id()
+        #m3model.PARC             = file.read_reference_by_id()
+        #m3model.RIB              = file.read_reference_by_id()
+        #m3model.PROJ             = file.read_reference_by_id()
+        #m3model.FOR              = file.read_reference_by_id()
+        #m3model.WRP              = file.read_reference_by_id()
+        #m3model.d24              = file.read_uint()
+        #m3model.d25              = file.read_uint()
+        #m3model.PHRB             = file.read_reference_by_id()
+        #m3model.d27              = file.read_uint()
+        #m3model.d28              = file.read_uint()
+        #m3model.d29              = file.read_uint()
+        #m3model.d30              = file.read_uint()
+        #m3model.d32              = file.read_uint()
+        #m3model.d33              = file.read_uint()
+        #m3model.IKJT             = file.read_reference_by_id()
+        #m3model.d35              = file.read_uint()
+        #m3model.d36              = file.read_uint()
+        #m3model.PATU             = file.read_reference_by_id()
+        #m3model.TRGD             = file.read_reference_by_id()
+        file.skip_bytes(0xD8)
+        print("S IREF")
+        m3model.IREF             = file.read_reference_by_id()
+        print("E IREF")        
         
         # Reading Vertices
         count = 0
@@ -507,7 +588,7 @@ class MODL23:
             for j in range(regn.OffsetFaces, regn.OffsetFaces + regn.NumFaces, 3):
                 faces.append((Div.Indices[j], Div.Indices[j+1], Div.Indices[j+2]))
                 
-            submesh = Submesh(vertices, faces, m3model.Materials[m3model.MaterialLookup[bat.MAT_Index].MaterialIndex])
+            submesh = Submesh(vertices, faces, m3model.Materials[m3model.MaterialLookup[bat.MAT_Index].MaterialIndex], m3model.IREF, m3model.Bones)
             submeshes.append(submesh)
             
         
@@ -559,12 +640,65 @@ class M3Header:
         
         assert(modelReference.Count == 1)
         self.m3Model = MODL23.read(file)
+
+def createArmatures(bones, irefs):
+    bpy.ops.object.add(
+        type='ARMATURE', 
+        enter_editmode=True, 
+        location=[0, 0, 0])
         
+    ob       = bpy.context.object
+    ob.x_ray = True
+    ob.name  = 'SC2Armature'
+    
+    amt           = ob.data
+    amt.name      = 'SC2ArmatureAMT'
+    amt.draw_axes = True
+    
+    bpy.ops.object.mode_set(mode='EDIT')
+    
+    # building hierarchy
+    bone_list = []
+    for i, b in enumerate(bones):
+        new_bone = amt.edit_bones.new(b.name)
+    
+        if b.parent is not -1:
+            new_bone.parent = bone_list[b.parent]
+        
+        #new_bone.matrix = irefs[i]
+        
+        bone_list.append(new_bone)
+        
+    # calculating
+    for i, b in enumerate(bone_list):
+        v = Vector([0, 0, 0, 0.1])
+        m = irefs[i].matrix
+        if b.parent is not None:
+            b.head = b.parent.tail
+        else:
+            b.head = Vector([0,0,0])
+        b.tail = b.head + (v*m).resize3D()
+        print(b.tail)
+    
+    #for i, b in enumerate(bone_list):
+    #    v = Vector([0,0,0,0.1])
+    #    v = v * irefs[i].matrix
+        
+        #parent = bones[i].parent
+        #while parent is not -1:
+        #    v = v * irefs[parent].matrix
+        #    parent = bones[parent].parent
+            
+    #    b.tail = v.resize3D()
+        
+    #for i, b in enumerate(bone_list):
+    #    if b.parent is not None:
+    #        b.head = b.parent.tail
 def createMaterial(material):
     # Create image texture from image. Change here if the snippet
     # folder is not located in you home directory.
     mat = bpy.data.materials.new(material.Name)
-    # mat.shadeless = True
+    mat.shadeless = True
     
     for map_type, i in MAT.LAYER_TYPE:
         subpath = material.Layers[i].Path
@@ -596,7 +730,7 @@ def createMaterial(material):
                 
 class Submesh:
 
-    def __init__(self, vertices, faces, material):
+    def __init__(self, vertices, faces, material, iref, bones):
         self.Name = "NONAME"
         self.Vertices = []
         # TODO: maybe better to unflatten here instead of in calling function
@@ -604,6 +738,8 @@ class Submesh:
         self.UV1 = []
         
         self.Material = material
+        self.bones = bones
+        self.iref = iref
         
         # position in vertices array
         for v in vertices:
@@ -646,6 +782,8 @@ def import_m3(context, filepath, importMaterial):
         if importMaterial:
             mat = createMaterial(submesh.Material)
             ob.data.add_material(mat)
+            
+        createArmatures(submesh.bones, submesh.iref)
             
         #for f in ob.data.faces:
         #    print(f.material_index)
