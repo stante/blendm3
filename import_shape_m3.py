@@ -124,7 +124,7 @@ class M3File:
         print(entry.Id)
 
         if (entry.Offset == 0):
-            return []
+            return None
         
         position = self.file.tell()
         
@@ -351,54 +351,88 @@ class STC:
         print("IndStc: %d" % self.indSTC)
         print("----------------------------------")
 
-        
-MATM_TYPE = {'MAT':1, 'DIS':2, 'CMP':3, 'TER':4, 'VOL':5}
 class MATM:
-    
+    #TYPES = {'MAT':1, 'DIS':2, 'CMP':3, 'TER':4, 'VOL':5}
+    TYPES = {1:'MAT', 2:'DIS', 3:'CMP', 4:'TER', 5:'VOL'}
     def __init__(self, file):
-        self.MaterialType  = file.read_uint()
+        self.material_type  = MATM.TYPES[file.read_uint()]
         self.MaterialIndex = file.read_uint()
         
-        if (self.MaterialType != MATM_TYPE['MAT']):
+        if (self.material_type != 'MAT'):
             print("Unsupported material type")
-        
-class MAT:
-    LAYER_TYPE = [('COLOR', 0), ('SPECULARITY', 2), ('COLOR', 3), ('NORMAL', 9)]
-    def __init__(self, file):
-        # Read chunk
-        self.Name = file.read_reference_by_id()
-        self.D1 = file.read_uint()
-        self.Flags = file.read_uint()
-        self.BlendMode = file.read_uint()
-        self.Priority = file.read_uint()
-        self.D2 = file.read_uint()
-        self.Specularity = file.read_float()
-        self.F1 = file.read_float()
-        self.CutoutThreshold = file.read_uint()
-        self.SpecularMultiplier = file.read_float()
-        self.EmissiveMultiplier = file.read_float()
-        
-        self.Layers = []
-        
-        for i in range(13):
-            self.Layers.append(file.read_reference_by_id())
-            #if self.Layers[i] != None:
-            #    print("%s: %s" % (i, self.Layers[i].Path))
+
+def set_flags(bits, flag_defines):
+    flags = {}
+    
+    for flag_name, mask in flag_defines.items():
+        if bits & mask is not 0:
+            flags[flag_name] = True
+        else:
+            flags[flag_name] = False
             
-        self.D3 = file.read_uint()
-        self.LayerBlend = file.read_uint()
-        self.EmissiveBlend = file.read_uint()
-        self.D4 = file.read_uint()
-        self.SpecularType = file.read_uint()
-        
-        file.skip_bytes(2*0x14)
-                
+    return flags
+
 class LAYR:
+    #TYPES = [('COLOR', 0), ('SPECULARITY', 2), ('COLOR', 3), ('NORMAL', 9)]
+    #TYPES = {'DIFFUSE':0, 'DECAL':1, 'SPECULAR':2, 'SELF_ILLUMINATION':3, 'EMISSIVE':4, 'ENVIO':5, 'ENVIO_MASK':6, 'ALPHA':7, 'UNKNOWN':8, 'NORMAL':9, 'HEIGHT':10}
+    TYPES = {0:'DIFFUSIVE', 1:'DECAL', 2:'SPECULAR', 3:'SELF_ILLUMINATION', 
+             4:'EMISSIVE', 5:'ENVIO', 6:'ENVIO_MASK', 7:'ALPHA', 8:'UNKNOWN1', 
+             9:'NORMAL', 10:'HEIGHT', 11:'UNKNOWN2', 12:'UNKNOWN3'}
+
 
     def __init__(self, file):
         file.skip_bytes(4)
         self.Path = file.read_reference_by_id()
+    
+class MAT:
+    FLAGS = {'UNFOGGED_1'        :0x4, 
+             'TWO_SIDED'         :0x8, 
+             'UNSHADED'          :0x10, 
+             'NO_SHADOW_CAST'    :0x20, 
+             'NO_HIT'            :0x40, 
+             'NO_SHADOW_RECEIVED':0x80, 
+             'DEPTH_PREPASS'     :0x100, 
+             'USE_TERRAIN_HDR'   :0x200, 
+             'SPLAT_UV_FIX'      :0x800, 
+             'SOFT_BLENDING'     :0x1000, 
+             'UNFOGGED_2'        :0x2000}
+
+    BLEND_MODE = {'OPAQUE'     :0,
+                  'ALPHA_BLEND':1,
+                  'ADD'        :2,
+                  'ALPHA_ADD'  :3,
+                  'MOD'        :4,
+                  'MOD2X'      :5}
+             
+    def __init__(self, file):
+        # Read chunk
+        self.Name                = file.read_reference_by_id()
+        self.D1                  = file.read_uint()
+        self.flags               = set_flags(file.read_uint(), MAT.FLAGS)
+        self.BlendMode           = file.read_uint()
+        self.Priority            = file.read_uint()
+        self.D2                  = file.read_uint()
+        self.specularity         = file.read_float()
+        self.F1                  = file.read_float()
+        self.CutoutThreshold     = file.read_uint()
+        self.specular_multiplier = file.read_float()
+        self.EmissiveMultiplier  = file.read_float()
         
+        self.Layers = {}
+        
+        for i in range(13):
+            self.Layers[LAYR.TYPES[i]] = file.read_reference_by_id()
+            
+        self.D3            = file.read_uint()
+        self.LayerBlend    = file.read_uint()
+        self.EmissiveBlend = file.read_uint()
+        self.D4            = file.read_uint()
+        self.specular_type = file.read_uint()
+        
+        file.skip_bytes(2*0x14)
+        
+        print("spec: %f, %f, %d" % (self.specularity, self.specular_multiplier, self.specular_type))
+                
         
 class BAT:
     
@@ -704,21 +738,73 @@ def createArmatures(bones, irefs):
     #    if b.parent is not None:
     #        b.tail = b.parent.head
 def createMaterial(material):
-    # Create image texture from image. Change here if the snippet
-    # folder is not located in you home directory.
     mat = bpy.data.materials.new(material.Name)
-    mat.shadeless = True
     
-    for map_type, i in MAT.LAYER_TYPE:
-        subpath = material.Layers[i].Path
+    # Material options
+    #mat.shadeless           = not material.flags['UNSHADED']
+    mat.shadeless           = False
+    mat.shadows             = not material.flags['NO_SHADOW_RECEIVED']
+    mat.cast_buffer_shadows = not material.flags['NO_SHADOW_CAST']
+    mat.specular_intensity  = material.specularity
+    
+    #=============================================================
+    # Create Emissive
+    #=============================================================
+    emissive_layer = material.Layers['EMISSIVE']
+    tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
+    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='EMIT')
+
+    #=============================================================
+    # Create Diffusive
+    #=============================================================
+    diffusive_layer = material.Layers['DIFFUSIVE']
+    
+    tex = createTexture(material.Name + "_DIFFUSIVE", diffusive_layer.Path)
+    tex.use_alpha = False
+    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='COLOR')
+    
+    texture_slot = mat.texture_slots[1]
+    texture_slot.map_diffuse   = True
+    texture_slot.map_colordiff = True
+    
+    #==============================================================
+    # Create Specular
+    #==============================================================
+    specular_layer  = material.Layers['SPECULAR']
+    
+    tex = createTexture(material.Name + "_SPECULAR", specular_layer.Path)
+    tex.use_alpha = False
+
+    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='SPECULARITY')
+    
+    #==============================================================
+    # Create Normal
+    #==============================================================
+    normal_layer = material.Layers['NORMAL']
+    
+    tex = createTexture(material.Name + "_NORMAL", normal_layer.Path)
+    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='NORMAL')
+    
+    #print(material.Layers)
+    #for mat_type, layer in material.Layers.items():
+    #    if layer is None:
+    #        continue
+    # 
+    #    subpath = layer.Path
+    #    print(str(subpath))
+    #    # Currently ignore all 'empty' paths
+    #    # according to documentation even this paths need a certain kind of treatment
+    #    if subpath == '' or subpath == None:
+    #        continue
+    #    
+    #    tex = createTexture(subpath)
+    #    mat.add_texture(texture = tex,texture_coordinates = 'UV', map_to = 'COLOR')
         
-        # Currently ignore all 'empty' paths
-        # according to documentation even this paths need a certain kind of treatment
-        if subpath == '':
-            continue
-        
-        realpath = os.path.abspath(subpath)
-        tex = bpy.data.textures.new(basename(subpath))
+    return mat
+    
+def createTexture(name, filepath):
+        realpath = os.path.abspath(filepath)
+        tex = bpy.data.textures.new(name)
         tex.type = 'IMAGE'
         tex = tex.recast_type()
         
@@ -727,16 +813,14 @@ def createMaterial(material):
             # tex.use_alpha = True
 
             # Create shadeless material and MTex
-            mat.add_texture(texture = tex,texture_coordinates = 'UV', map_to = map_type)
-            print("Importing texture: [%d] %s" % (i, realpath))
 
-        except:
-            print("Cannot load texture: %s" % realpath)
-        
+            print("Importing texture: %s" % realpath)
 
+        except Exception as err:
+            print("Cannot load texture: %s (%s)" % (realpath, str(err)))    
         
-    return mat
-                
+        return tex
+        
 class Submesh:
 
     def __init__(self, vertices, faces, material, iref, bones):
