@@ -317,7 +317,7 @@ class BONE:
         for i in range(34):
             self.floats.append(file.read_float())
             
-        print("Name: %s, Parent: %d" % (self.name, self.parent))
+        print("Name: %s, Parent: %d, Flags: %s" % (self.name, self.parent, hex(self.flags)))
 
 class STC:
     
@@ -665,35 +665,33 @@ def createArmatures(bones, irefs):
         if b.parent is not -1:
             new_bone.parent = bone_list[b.parent]
         
-        #new_bone.matrix = irefs[i]
-        
         bone_list.append(new_bone)
         
     # calculating
     for i, b in enumerate(bone_list):
-        v = Vector([0, 0, 0, 0.1])
+        v = Vector([0, 0, 0, 1])
         m = irefs[i].matrix
         if b.parent is not None:
-            b.head = b.parent.tail
+            b.tail = b.parent.head
         else:
             b.head = Vector([0,0,0])
-        b.tail = b.head + (v*m).resize3D()
-        print(b.tail)
+        b.head = b.tail + (v*m).resize3D()
+        #print(b.tail)
     
     #for i, b in enumerate(bone_list):
-    #    v = Vector([0,0,0,0.1])
+    #    v = Vector([0,0,0,1])
     #    v = v * irefs[i].matrix
         
-        #parent = bones[i].parent
-        #while parent is not -1:
-        #    v = v * irefs[parent].matrix
-        #    parent = bones[parent].parent
-            
-    #    b.tail = v.resize3D()
+    #    parent = bones[i].parent
+    #    while parent is not -1:
+    #        v = v * irefs[parent].matrix
+    #        parent = bones[parent].parent
+           
+    #    b.head = v.resize3D()
         
     #for i, b in enumerate(bone_list):
     #    if b.parent is not None:
-    #        b.head = b.parent.tail
+    #        b.tail = b.parent.head
 def createMaterial(material):
     # Create image texture from image. Change here if the snippet
     # folder is not located in you home directory.
@@ -757,8 +755,8 @@ def import_m3(context, filepath, importMaterial):
     name = basename(filepath)
     #name = m3Header.m3Model.name
     #os.chdir(os.path.dirname(filepath))
-    #os.chdir("h:/Downloads/work")
-    os.chdir("C:/Users/alex/Documents")
+    os.chdir("h:/Downloads/work")
+    #os.chdir("C:/Users/alex/Documents")
 
     for submesh in m3Header.m3Model:
         #name = submesh
