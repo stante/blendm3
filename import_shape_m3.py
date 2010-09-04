@@ -20,6 +20,17 @@
 #
 # This script imports the M3 file into Blender for editing
 
+
+bl_addon_info = {
+    'name'       : 'Import: Blizzard M3 Model(.m3)',
+    'author'     : 'Alexander Stante',
+    'version'    : '0.13',
+    'blender'    : (2, 5, 3),
+    'location'   : 'File > Import ',
+    'description': 'Import the Blizzard M3 Model Format(.m3)',
+    'url'        : 'http://code.google.com/b/blendm3',
+    'category'   : 'Import/Export'}
+
 import bpy
 import os
 
