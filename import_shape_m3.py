@@ -742,9 +742,9 @@ def createMaterial(material):
     
     # Material options
     #mat.shadeless           = not material.flags['UNSHADED']
-    mat.shadeless           = False
-    mat.shadows             = not material.flags['NO_SHADOW_RECEIVED']
-    mat.cast_buffer_shadows = not material.flags['NO_SHADOW_CAST']
+    mat.use_shadeless           = False
+    mat.use_shadows             = not material.flags['NO_SHADOW_RECEIVED']
+    mat.use_cast_buffer_shadows = not material.flags['NO_SHADOW_CAST']
     mat.specular_intensity  = material.specularity
     
     #=============================================================
@@ -752,7 +752,7 @@ def createMaterial(material):
     #=============================================================
     emissive_layer = material.Layers['EMISSIVE']
     tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
-    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='EMIT')
+    mat.texture.add(texture=tex, texture_coordinates='UV', map_to='EMIT')
 
     #=============================================================
     # Create Diffusive
@@ -804,9 +804,9 @@ def createMaterial(material):
     
 def createTexture(name, filepath):
         realpath = os.path.abspath(filepath)
-        tex = bpy.data.textures.new(name)
-        tex.type = 'IMAGE'
-        tex = tex.recast_type()
+        tex = bpy.data.textures.new(name, 'IMAGE')
+        #tex.type = 'IMAGE'
+        #tex = tex.recast_type()
         
         try:
             tex.image = bpy.data.images.load(realpath)
@@ -850,15 +850,15 @@ def import_m3(context, filepath, importMaterial):
     name = basename(filepath)
     #name = m3Header.m3Model.name
     #os.chdir(os.path.dirname(filepath))
-    os.chdir("h:/Downloads/work")
-    #os.chdir("C:/Users/alex/Documents")
+    #os.chdir("h:/Downloads/work")
+    os.chdir("C:/Users/alex/Documents")
 
     for submesh in m3Header.m3Model:
         #name = submesh
         mesh = bpy.data.meshes.new(name)
         mesh.from_pydata(submesh.Vertices, [], submesh.Faces)
         
-        mesh.add_uv_texture()
+        mesh.uv_textures.new()
         uvtex = mesh.uv_textures[0]
         uvtex.name = "UVLayer1"
         
@@ -876,7 +876,7 @@ def import_m3(context, filepath, importMaterial):
             mat = createMaterial(submesh.Material)
             ob.data.add_material(mat)
             
-        createArmatures(submesh.bones, submesh.iref)
+        #createArmatures(submesh.bones, submesh.iref)
             
         #for f in ob.data.faces:
         #    print(f.material_index)
@@ -896,15 +896,15 @@ class IMPORT_OT_m3(bpy.types.Operator):
     #IMPORT_NORMALS   = BoolProperty(name="Import Normals", description="Import the Model Normals", default=False)
     IMPORT_MATERIALS = BoolProperty(name="Create Material", description="Creates material for the model", default=False)
     
-    def poll(self, context):
-        return True
+    #def poll(self, context):
+    #    return True
         
     def execute(self, context):
         import_m3(context, self.properties.filepath, self.properties.IMPORT_MATERIALS)
         return {'FINISHED'}
         
     def invoke(self, context, event):
-        wm = context.manager
+        wm = context.window_manager
         wm.add_fileselect(self)
         return {'RUNNING_MODAL'}
         
@@ -912,11 +912,11 @@ def menu_func(self, context):
     self.layout.operator(IMPORT_OT_m3.bl_idname, text="Blizzard M3 (.m3)")
 
 def register():
-    bpy.types.register(IMPORT_OT_m3)
+    #bpy.types.register(IMPORT_OT_m3)
     bpy.types.INFO_MT_file_import.append(menu_func)
     
 def unregister():
-    bpy.types.unregister(IMPORT_OT_m3)
+    #bpy.types.unregister(IMPORT_OT_m3)
     bpy.types.INFO_MT_file_import.remove(menu_func)
 
 if __name__ == "__main__":
