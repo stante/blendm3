@@ -495,6 +495,7 @@ VERTEX_TYPE = {'VERTEX32':1, 'VERTEX36':2, 'VERTEX40':3, 'VERTEX44':4}
 class M3Vertex:
     
     def __init__(self, file, type, flags):
+        self.type       = type
         self.Position   = file.read_vector()
         self.BoneWeight = file.read_bytes(4)
         self.BoneIndex  = file.read_bytes(4)
@@ -764,6 +765,20 @@ def createMaterial(material):
     slot.use_map_diffuse       = True
     slot.use_map_color_diffuse = True
     
+    #=============================================================
+    # Create Decal
+    #=============================================================
+    diffusive_layer = material.Layers['DECAL']
+    
+    tex = createTexture(material.Name + "_DECAL", diffusive_layer.Path)
+    tex.use_alpha = True
+    
+    slot = mat.texture_slots.add()
+    slot.texture               = tex
+    slot.texture_coords        = 'UV'
+    slot.use_map_diffuse       = True
+    slot.use_map_color_diffuse = True    
+    
     #==============================================================
     # Create Specular
     #==============================================================
@@ -851,7 +866,7 @@ class Submesh:
         self.Vertices = []
         # TODO: maybe better to unflatten here instead of in calling function
         self.Faces = faces
-        self.UV1 = []
+        self.UV = []
         
         self.Material = material
         self.bones = bones
@@ -862,7 +877,10 @@ class Submesh:
             self.Vertices.append(v.Position)
             
         for i, f in enumerate(self.Faces):
-            self.UV1.append(((vertices[f[0]].UV[0]), (vertices[f[1]].UV[0]), (vertices[f[2]].UV[0])))
+            #self.UV1.append(((vertices[f[0]].UV[0]), (vertices[f[1]].UV[0]), (vertices[f[2]].UV[0])))
+            
+            
+            self.UV.append(((vertices[f[0]].UV), (vertices[f[1]].UV), (vertices[f[2]].UV)))
 
 def m3import(context, filepath, import_material, search_textures):
     file = M3File(filepath)
@@ -884,15 +902,25 @@ def m3import(context, filepath, import_material, search_textures):
         mesh.from_pydata(submesh.Vertices, [], submesh.Faces)
         
         mesh.uv_textures.new()
-        uvtex = mesh.uv_textures[0]
-        uvtex.name = "UVLayer1"
+        mesh.uv_textures.new()
+        mesh.uv_textures.new()
+        mesh.uv_textures.new()
+        mesh.uv_textures[0].name = 'UV_0'
+        mesh.uv_textures[1].name = 'UV_1'
+        mesh.uv_textures[2].name = 'UV_2'
+        mesh.uv_textures[3].name = 'UV_3'
+        #uvtex = mesh.uv_textures[0]
+        #uvtex.name = "UVLayer1"
         
-        for i, uv in enumerate(submesh.UV1):
-            data = uvtex.data[i]
-            data.uv1 = uv[0]
-            data.uv2 = uv[1]
-            data.uv3 = uv[2]
-            data.uv4 = (0,0)
+        for i, face in enumerate(submesh.UV):
+            for l in range(len(face[0])):
+                data = mesh.uv_textures[l].data[i]
+                #print("l:%s - %s" % (l, str(uv)))
+                print("l: %d face: %s" % (l, face[0]))
+                data.uv1 = face[0][l]
+                data.uv2 = face[1][l]
+                data.uv3 = face[2][l]
+                data.uv4 = (0,0)
         
         mesh.update(True)
         ob = bpy.data.objects.new(name, mesh)
