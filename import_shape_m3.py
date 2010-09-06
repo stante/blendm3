@@ -24,10 +24,12 @@
 bl_addon_info = {
     'name'       : 'Import: Blizzard M3 Model(.m3)',
     'author'     : 'Alexander Stante',
-    'version'    : '0.13',
+    'version'    : (0, 13),
     'blender'    : (2, 5, 3),
+    "api"        : 31667,
     'location'   : 'File > Import ',
     'description': 'Import the Blizzard M3 Model Format(.m3)',
+    'warning'    : "",
     'url'        : 'http://code.google.com/b/blendm3',
     'category'   : 'Import/Export'}
 
@@ -375,8 +377,8 @@ def set_flags(bits, flag_defines):
 class LAYR:
     #TYPES = [('COLOR', 0), ('SPECULARITY', 2), ('COLOR', 3), ('NORMAL', 9)]
     #TYPES = {'DIFFUSE':0, 'DECAL':1, 'SPECULAR':2, 'SELF_ILLUMINATION':3, 'EMISSIVE':4, 'ENVIO':5, 'ENVIO_MASK':6, 'ALPHA':7, 'UNKNOWN':8, 'NORMAL':9, 'HEIGHT':10}
-    TYPES = {0:'DIFFUSIVE', 1:'DECAL', 2:'SPECULAR', 3:'SELF_ILLUMINATION', 
-             4:'EMISSIVE', 5:'ENVIO', 6:'ENVIO_MASK', 7:'ALPHA', 8:'UNKNOWN1', 
+    TYPES = {0:'DIFFUSIVE', 1:'DECAL', 2:'SPECULAR', 3:'EMISSIVE', 
+             4:'EMISSIVE_COLOR', 5:'ENVIO', 6:'ENVIO_MASK', 7:'ALPHA', 8:'UNKNOWN1', 
              9:'NORMAL', 10:'HEIGHT', 11:'UNKNOWN2', 12:'UNKNOWN3'}
 
 
@@ -745,14 +747,8 @@ def createMaterial(material):
     mat.use_shadeless           = False
     mat.use_shadows             = not material.flags['NO_SHADOW_RECEIVED']
     mat.use_cast_buffer_shadows = not material.flags['NO_SHADOW_CAST']
-    mat.specular_intensity  = material.specularity
-    
-    #=============================================================
-    # Create Emissive
-    #=============================================================
-    emissive_layer = material.Layers['EMISSIVE']
-    tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
-    mat.texture.add(texture=tex, texture_coordinates='UV', map_to='EMIT')
+    #mat.specular_intensity      = material.specularity
+    mat.specular_intensity      = 0.0
 
     #=============================================================
     # Create Diffusive
@@ -761,11 +757,12 @@ def createMaterial(material):
     
     tex = createTexture(material.Name + "_DIFFUSIVE", diffusive_layer.Path)
     tex.use_alpha = False
-    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='COLOR')
     
-    texture_slot = mat.texture_slots[1]
-    texture_slot.map_diffuse   = True
-    texture_slot.map_colordiff = True
+    slot = mat.texture_slots.add()
+    slot.texture               = tex
+    slot.texture_coords        = 'UV'
+    slot.use_map_diffuse       = True
+    slot.use_map_color_diffuse = True
     
     #==============================================================
     # Create Specular
@@ -774,8 +771,14 @@ def createMaterial(material):
     
     tex = createTexture(material.Name + "_SPECULAR", specular_layer.Path)
     tex.use_alpha = False
-
-    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='SPECULARITY')
+    
+    slot = mat.texture_slots.add()
+    slot.texture               = tex
+    slot.texture_coords        = 'UV'
+    slot.use_map_color_diffuse = False   
+    slot.use_map_specular      = True
+    #slot.use_map_color_spec    = True
+    slot.specular_factor       = 0.2
     
     #==============================================================
     # Create Normal
@@ -783,23 +786,43 @@ def createMaterial(material):
     normal_layer = material.Layers['NORMAL']
     
     tex = createTexture(material.Name + "_NORMAL", normal_layer.Path)
-    mat.add_texture(texture=tex, texture_coordinates='UV', map_to='NORMAL')
     
-    #print(material.Layers)
-    #for mat_type, layer in material.Layers.items():
-    #    if layer is None:
-    #        continue
-    # 
-    #    subpath = layer.Path
-    #    print(str(subpath))
-    #    # Currently ignore all 'empty' paths
-    #    # according to documentation even this paths need a certain kind of treatment
-    #    if subpath == '' or subpath == None:
-    #        continue
-    #    
-    #    tex = createTexture(subpath)
-    #    mat.add_texture(texture = tex,texture_coordinates = 'UV', map_to = 'COLOR')
-        
+    slot = mat.texture_slots.add()
+    slot.texture               = tex # (texture=tex, texture_coordinates='UV', map_to='NORMAL')
+    slot.texture_coords        = 'UV'
+    slot.use_map_color_diffuse = False
+    slot.use_map_normal        = True
+
+    #=============================================================
+    # Create Emissive Color
+    #=============================================================
+    #emissive_layer = material.Layers['EMISSIVE_COLOR']
+
+    #tex = createTexture(material.Name + "_EMISSIVE_COLOR", emissive_layer.Path)
+    #tex.use_calculate_alpha = True
+    #tex.use_alpha           = True
+    
+    #slot = mat.texture_slots.add()
+    #slot.texture               = tex
+    #slot.texture_coords        = 'UV'
+    #slot.use_map_color_diffuse = True
+    #slot.use_map_emit          = False
+
+    #=============================================================
+    # Create Emissive
+    #=============================================================
+    emissive_layer = material.Layers['EMISSIVE']
+
+    tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
+    tex.use_calculate_alpha = True
+    tex.use_alpha           = True
+    
+    slot = mat.texture_slots.add()
+    slot.texture               = tex
+    slot.texture_coords        = 'UV'
+    slot.use_map_color_diffuse = False
+    slot.use_map_emit          = True
+    
     return mat
     
 def createTexture(name, filepath):
@@ -850,8 +873,8 @@ def import_m3(context, filepath, importMaterial):
     name = basename(filepath)
     #name = m3Header.m3Model.name
     #os.chdir(os.path.dirname(filepath))
-    #os.chdir("h:/Downloads/work")
-    os.chdir("C:/Users/alex/Documents")
+    os.chdir("h:/Downloads/work")
+    #os.chdir("C:/Users/alex/Documents")
 
     for submesh in m3Header.m3Model:
         #name = submesh
@@ -874,7 +897,7 @@ def import_m3(context, filepath, importMaterial):
         
         if importMaterial:
             mat = createMaterial(submesh.Material)
-            ob.data.add_material(mat)
+            ob.data.materials.append(mat)
             
         #createArmatures(submesh.bones, submesh.iref)
             
