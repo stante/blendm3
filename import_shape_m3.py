@@ -864,17 +864,19 @@ class Submesh:
         for i, f in enumerate(self.Faces):
             self.UV1.append(((vertices[f[0]].UV[0]), (vertices[f[1]].UV[0]), (vertices[f[2]].UV[0])))
 
-def import_m3(context, filepath, importMaterial):
+def m3import(context, filepath, import_material, search_textures):
     file = M3File(filepath)
         
     # Reading file header
     m3Header = M3Header(file)
 
     name = basename(filepath)
-    #name = m3Header.m3Model.name
-    #os.chdir(os.path.dirname(filepath))
-    os.chdir("h:/Downloads/work")
-    #os.chdir("C:/Users/alex/Documents")
+    index = filepath.rfind('Assets')
+    if search_textures == True and index is not -1:
+        workdir = filepath[0:index]
+        os.chdir(workdir)
+    else:
+        os.chdir(os.path.dirname(filepath))
 
     for submesh in m3Header.m3Model:
         #name = submesh
@@ -895,7 +897,7 @@ def import_m3(context, filepath, importMaterial):
         mesh.update(True)
         ob = bpy.data.objects.new(name, mesh)
         
-        if importMaterial:
+        if import_material:
             mat = createMaterial(submesh.Material)
             ob.data.materials.append(mat)
             
@@ -912,18 +914,15 @@ class IMPORT_OT_m3(bpy.types.Operator):
     bl_idname = "import_shape.m3"
     bl_label  = "Import M3"
 
-    filepath = StringProperty(name="File Path", description="Filepath used for importing the M3 file", maxlen= 1024, default= "")
-    
-    # Options to select import porperties
-    #IMPORT_MESH      = BoolProperty(name="Import Mesh", description="Import the Model Geometry", default=True)
-    #IMPORT_NORMALS   = BoolProperty(name="Import Normals", description="Import the Model Normals", default=False)
-    IMPORT_MATERIALS = BoolProperty(name="Create Material", description="Creates material for the model", default=False)
-    
-    #def poll(self, context):
-    #    return True
+    filepath         = StringProperty(name="File Path", description="Filepath used for importing the M3 file", maxlen= 1024, default= "")
+    IMPORT_MATERIALS = BoolProperty(name="Create Material", description="Creates material for the model", default=True)
+    TEXTURE_SEARCH   = BoolProperty(name="Search Textures", description="Search for textures based on .mpq file structure", default=True)
         
     def execute(self, context):
-        import_m3(context, self.properties.filepath, self.properties.IMPORT_MATERIALS)
+        m3import(context, 
+                 self.properties.filepath, 
+                 self.properties.IMPORT_MATERIALS,
+                 self.properties.TEXTURE_SEARCH)
         return {'FINISHED'}
         
     def invoke(self, context, event):
@@ -935,11 +934,9 @@ def menu_func(self, context):
     self.layout.operator(IMPORT_OT_m3.bl_idname, text="Blizzard M3 (.m3)")
 
 def register():
-    #bpy.types.register(IMPORT_OT_m3)
     bpy.types.INFO_MT_file_import.append(menu_func)
     
 def unregister():
-    #bpy.types.unregister(IMPORT_OT_m3)
     bpy.types.INFO_MT_file_import.remove(menu_func)
 
 if __name__ == "__main__":
