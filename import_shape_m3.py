@@ -22,9 +22,9 @@
 
 
 bl_addon_info = {
-    'name'       : 'Import: Blizzard M3 Model(.m3)',
+    'name'       : 'Import Blizzard M3 Models(.m3)',
     'author'     : 'Alexander Stante',
-    'version'    : (0, 13),
+    'version'    : (0, 14),
     'blender'    : (2, 5, 3),
     "api"        : 31667,
     'location'   : 'File > Import ',
@@ -123,7 +123,7 @@ class M3File:
         entry = self.read_reference_entry()
         
         # Check for 'null' reference, return empty list
-        print(entry.Id)
+        #print(entry.Id)
 
         if (entry.Offset == 0):
             return None
@@ -314,7 +314,7 @@ class IREF:
         self.matrix = Matrix(v1, v2, v3, v4).transpose()
         
         
-        print(self.matrix)
+        #print(self.matrix)
         
 class BONE:
     
@@ -330,7 +330,7 @@ class BONE:
         for i in range(34):
             self.floats.append(file.read_float())
             
-        print("Name: %s, Parent: %d, Flags: %s" % (self.name, self.parent, hex(self.flags)))
+        #print("Name: %s, Parent: %d, Flags: %s" % (self.name, self.parent, hex(self.flags)))
 
 class STC:
     
@@ -344,14 +344,13 @@ class STC:
         
         self.seq_data = []
         for i in range(13):
-            print("--")
             self.seq_data.append(file.read_reference_by_id())
             
 
-        print("STC-------------------------------")
-        print("Name:   %s" % self.name)
-        print("IndStc: %d" % self.indSTC)
-        print("----------------------------------")
+        #print("STC-------------------------------")
+        #print("Name:   %s" % self.name)
+        #print("IndStc: %d" % self.indSTC)
+        #print("----------------------------------")
 
 class MATM:
     #TYPES = {'MAT':1, 'DIS':2, 'CMP':3, 'TER':4, 'VOL':5}
@@ -433,7 +432,7 @@ class MAT:
         
         file.skip_bytes(2*0x14)
         
-        print("spec: %f, %f, %d" % (self.specularity, self.specular_multiplier, self.specular_type))
+        #print("spec: %f, %f, %d" % (self.specularity, self.specular_multiplier, self.specular_type))
                 
         
 class BAT:
@@ -534,9 +533,7 @@ class MODL23:
         m3model.STG     = file.read_reference_by_id()
         
         file.skip_bytes(0x1c)
-        print("Reading Bones")
         m3model.Bones   = file.read_reference_by_id()
-        print("End reading bones")
         m3model.d5      = file.read_uint()
         m3model.Flags   = file.read_uint()
         vertexReference = file.read_reference_entry()
@@ -587,9 +584,7 @@ class MODL23:
         #m3model.PATU             = file.read_reference_by_id()
         #m3model.TRGD             = file.read_reference_by_id()
         file.skip_bytes(0xD8)
-        print("S IREF")
         m3model.IREF             = file.read_reference_by_id()
-        print("E IREF")        
         
         # Reading Vertices
         count = 0
@@ -757,13 +752,14 @@ def createMaterial(material):
     diffusive_layer = material.Layers['DIFFUSIVE']
     
     tex = createTexture(material.Name + "_DIFFUSIVE", diffusive_layer.Path)
-    tex.use_alpha = False
+    if tex is not None:
+        tex.use_alpha = False
     
-    slot = mat.texture_slots.add()
-    slot.texture               = tex
-    slot.texture_coords        = 'UV'
-    slot.use_map_diffuse       = True
-    slot.use_map_color_diffuse = True
+        slot = mat.texture_slots.add()
+        slot.texture               = tex
+        slot.texture_coords        = 'UV'
+        slot.use_map_diffuse       = True
+        slot.use_map_color_diffuse = True
     
     #=============================================================
     # Create Decal
@@ -771,13 +767,16 @@ def createMaterial(material):
     diffusive_layer = material.Layers['DECAL']
     
     tex = createTexture(material.Name + "_DECAL", diffusive_layer.Path)
-    tex.use_alpha = True
+    if tex is not None:
+        tex.use_alpha       = True
+        tex.image.use_premultiply = True
     
-    slot = mat.texture_slots.add()
-    slot.texture               = tex
-    slot.texture_coords        = 'UV'
-    slot.use_map_diffuse       = True
-    slot.use_map_color_diffuse = True    
+        slot = mat.texture_slots.add()
+        slot.texture               = tex
+        slot.texture_coords        = 'UV'
+        slot.use_map_diffuse       = True
+        slot.use_map_color_diffuse = True
+        slot.uv_layer              = 'UV_1'
     
     #==============================================================
     # Create Specular
@@ -785,15 +784,16 @@ def createMaterial(material):
     specular_layer  = material.Layers['SPECULAR']
     
     tex = createTexture(material.Name + "_SPECULAR", specular_layer.Path)
-    tex.use_alpha = False
+    if tex is not None:
+        tex.use_alpha = False
     
-    slot = mat.texture_slots.add()
-    slot.texture               = tex
-    slot.texture_coords        = 'UV'
-    slot.use_map_color_diffuse = False   
-    slot.use_map_specular      = True
-    #slot.use_map_color_spec    = True
-    slot.specular_factor       = 0.2
+        slot = mat.texture_slots.add()
+        slot.texture               = tex
+        slot.texture_coords        = 'UV'
+        slot.use_map_color_diffuse = False   
+        slot.use_map_specular      = True
+        #slot.use_map_color_spec    = True
+        slot.specular_factor       = 0.2
     
     #==============================================================
     # Create Normal
@@ -801,12 +801,12 @@ def createMaterial(material):
     normal_layer = material.Layers['NORMAL']
     
     tex = createTexture(material.Name + "_NORMAL", normal_layer.Path)
-    
-    slot = mat.texture_slots.add()
-    slot.texture               = tex # (texture=tex, texture_coordinates='UV', map_to='NORMAL')
-    slot.texture_coords        = 'UV'
-    slot.use_map_color_diffuse = False
-    slot.use_map_normal        = True
+    if tex is not None:
+        slot = mat.texture_slots.add()
+        slot.texture               = tex # (texture=tex, texture_coordinates='UV', map_to='NORMAL')
+        slot.texture_coords        = 'UV'
+        slot.use_map_color_diffuse = False
+        slot.use_map_normal        = True
 
     #=============================================================
     # Create Emissive Color
@@ -829,33 +829,33 @@ def createMaterial(material):
     emissive_layer = material.Layers['EMISSIVE']
 
     tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
-    tex.use_calculate_alpha = True
-    tex.use_alpha           = True
+    if tex is not None:
+        tex.use_calculate_alpha = True
+        tex.use_alpha           = True
     
-    slot = mat.texture_slots.add()
-    slot.texture               = tex
-    slot.texture_coords        = 'UV'
-    slot.use_map_color_diffuse = False
-    slot.use_map_emit          = True
+        slot = mat.texture_slots.add()
+        slot.texture               = tex
+        slot.texture_coords        = 'UV'
+        slot.use_map_color_diffuse = False
+        slot.use_map_emit          = True
     
     return mat
     
 def createTexture(name, filepath):
         realpath = os.path.abspath(filepath)
-        tex = bpy.data.textures.new(name, 'IMAGE')
-        #tex.type = 'IMAGE'
-        #tex = tex.recast_type()
         
-        try:
-            tex.image = bpy.data.images.load(realpath)
-            # tex.use_alpha = True
+        if os.path.exists(realpath):
+            tex = bpy.data.textures.new(name, 'IMAGE')
+        
+            try:
+                tex.image = bpy.data.images.load(realpath)
+                print("Importing texture: %s" % realpath)
 
-            # Create shadeless material and MTex
-
-            print("Importing texture: %s" % realpath)
-
-        except Exception as err:
-            print("Cannot load texture: %s (%s)" % (realpath, str(err)))    
+            except Exception as err:
+                print("Cannot load texture: %s (%s)" % (realpath, str(err))) 
+                return None
+        else:
+            return None
         
         return tex
         
@@ -897,7 +897,6 @@ def m3import(context, filepath, import_material, search_textures):
         os.chdir(os.path.dirname(filepath))
 
     for submesh in m3Header.m3Model:
-        #name = submesh
         mesh = bpy.data.meshes.new(name)
         mesh.from_pydata(submesh.Vertices, [], submesh.Faces)
         
@@ -909,14 +908,10 @@ def m3import(context, filepath, import_material, search_textures):
         mesh.uv_textures[1].name = 'UV_1'
         mesh.uv_textures[2].name = 'UV_2'
         mesh.uv_textures[3].name = 'UV_3'
-        #uvtex = mesh.uv_textures[0]
-        #uvtex.name = "UVLayer1"
-        
+
         for i, face in enumerate(submesh.UV):
             for l in range(len(face[0])):
                 data = mesh.uv_textures[l].data[i]
-                #print("l:%s - %s" % (l, str(uv)))
-                print("l: %d face: %s" % (l, face[0]))
                 data.uv1 = face[0][l]
                 data.uv2 = face[1][l]
                 data.uv3 = face[2][l]
