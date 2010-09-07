@@ -64,7 +64,7 @@ The following files are included with the distribution of the plugin:
 `-- import_shape_m3.py   The actual plugin.
 
 To install the plugin download the archive and extract the contents into
-a folder. From Blender go to 'File->User Prefeences...->Add-Ons'. Click
+a folder. From Blender go to 'File > User Prefeences... > Add-Ons'. Click
 on 'Install Add-On...' and select the file 'import_shape_m3.py'. These
 steps installs the add-on.
 
@@ -72,7 +72,7 @@ To activate the add-on go to 'Import/Export' in the same tab and activate
 the 'Import/Export: Import Blizzard M3 Models(.m3)' by activating the 
 checkbox.
 
-After these steps the plugin shoud show off in 'File->Import->Blizzard M3(.m3)'
+After these steps the plugin shoud show off in 'File > Import > Blizzard M3(.m3)'
 
 === Usage
 
