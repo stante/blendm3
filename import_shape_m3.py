@@ -29,8 +29,9 @@ bl_addon_info = {
     "api"        : 31667,
     'location'   : 'File > Import ',
     'description': 'Import the Blizzard M3 Model Format(.m3)',
-    'warning'    : "",
-    'url'        : 'http://code.google.com/b/blendm3',
+    'warning'    : 'Alpha',
+    'wiki_url'   : 'http://code.google.com/p/blendm3',
+    'tracker_url': 'http://code.google.com/p/blendm3/issues/entry',
     'category'   : 'Import/Export'}
 
 import bpy
