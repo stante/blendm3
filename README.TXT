@@ -21,7 +21,7 @@ feel free to contact me.
 
 === History
 
-0.14 
+0.14 2010-09-07
   * Works now with Blender from trunk (tested with r31786)
   * Can now be used with the Blender addon installer
   * Option to search for texture asserts added
@@ -30,17 +30,17 @@ feel free to contact me.
   * Added import of decal texture layer
   * Imports now all UV layers
 
-0.13
+0.13 2010-08-22
   * Support for material import added
   * Normals, Emissive and Diffusive are supported
 
-0.12
+0.12 2010-08-20
   * Support for all vertex formats added.
 
-0.11
+0.11 2010-08-19
   * Error handling improved.
   
-0.10
+0.10 2010-08-18
   * Basic support for reading geometry.
   
 
