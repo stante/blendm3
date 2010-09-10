@@ -769,7 +769,8 @@ def createMaterial(material):
     
     tex = createTexture(material.Name + "_DECAL", diffusive_layer.Path)
     if tex is not None:
-        tex.use_alpha       = True
+        tex.use_alpha             = True
+        tex.extension             = 'CLIP'
         tex.image.use_premultiply = True
     
         slot = mat.texture_slots.add()
