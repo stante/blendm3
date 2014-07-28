@@ -48,6 +48,7 @@ Further Reading
 
 Screenshots
 ===========
+![][screenshot]
 
 Full list of screenshots here.
 
@@ -60,3 +61,6 @@ the .m3 provided by the libm3 project. The project homepage is
 information about the file format. Also a big thank NiNtoxicated who
 developed a 3DS Max plugin which is also a great source to understand
 the .m3 file format.
+
+[screenshot]: https://raw.github.com/wiki/stante/blendm3/images/colossus_uv_render_editing_small.png
+ "Colossus uv render"
