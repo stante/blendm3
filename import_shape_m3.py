@@ -21,7 +21,7 @@
 # This script imports the M3 file into Blender for editing
 
 
-bl_addon_info = {
+bl_info = {
     'name'       : 'Import Blizzard M3 Models(.m3)',
     'author'     : 'Alexander Stante',
     'version'    : (0, 14),
@@ -42,6 +42,7 @@ from struct import unpack_from, calcsize
 from os.path import basename
 from mathutils import Matrix
 from mathutils import Vector
+from bpy_extras.io_utils import ImportHelper
 
 # M3 File representation encapsulating file handle
 class M3File:
@@ -934,7 +935,7 @@ def m3import(context, filepath, import_material, search_textures):
         
         context.scene.objects.link(ob)
 
-class IMPORT_OT_m3(bpy.types.Operator):
+class IMPORT_OT_m3(bpy.types.Operator, ImportHelper):
     '''Import from Blizzard M3 file'''
     bl_idname = "import_shape.m3"
     bl_label  = "Import M3"
@@ -950,18 +951,15 @@ class IMPORT_OT_m3(bpy.types.Operator):
                  self.properties.TEXTURE_SEARCH)
         return {'FINISHED'}
         
-    def invoke(self, context, event):
-        wm = context.window_manager
-        wm.add_fileselect(self)
-        return {'RUNNING_MODAL'}
-        
 def menu_func(self, context):
     self.layout.operator(IMPORT_OT_m3.bl_idname, text="Blizzard M3 (.m3)")
 
 def register():
+    bpy.utils.register_module(__name__)
     bpy.types.INFO_MT_file_import.append(menu_func)
     
 def unregister():
+    bpy.utils.unregister_module(__name__)
     bpy.types.INFO_MT_file_import.remove(menu_func)
 
 if __name__ == "__main__":
