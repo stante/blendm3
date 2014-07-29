@@ -940,9 +940,18 @@ class IMPORT_OT_m3(bpy.types.Operator, ImportHelper):
     bl_idname = "import_shape.m3"
     bl_label  = "Import M3"
 
-    filepath         = StringProperty(name="File Path", description="Filepath used for importing the M3 file", maxlen= 1024, default= "")
-    IMPORT_MATERIALS = BoolProperty(name="Create Material", description="Creates material for the model", default=True)
-    TEXTURE_SEARCH   = BoolProperty(name="Search Textures", description="Search for textures based on .mpq file structure", default=True)
+    filepath = StringProperty(name="File Path", 
+                              description="Filepath used for importing the M3 file", 
+                              maxlen= 1024, 
+                              default= "")
+ 
+   IMPORT_MATERIALS = BoolProperty(name="Create Material", 
+                                    description="Creates material for the model", 
+                                    default=True)
+
+   TEXTURE_SEARCH = BoolProperty(name="Search Textures", 
+                                 description="Search for textures based on .mpq file structure", 
+                                 default=True)
         
     def execute(self, context):
         m3import(context, 
