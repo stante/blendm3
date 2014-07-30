@@ -885,7 +885,7 @@ class Submesh:
             
             self.UV.append(((vertices[f[0]].UV), (vertices[f[1]].UV), (vertices[f[2]].UV)))
 
-def m3import(context, filepath, import_material, search_textures):
+def load(context, filepath, import_material, search_textures):
     file = M3File(filepath)
         
     # Reading file header
@@ -944,20 +944,21 @@ class IMPORT_OT_m3(bpy.types.Operator, ImportHelper):
                               description="Filepath used for importing the M3 file", 
                               maxlen= 1024, 
                               default= "")
- 
-   IMPORT_MATERIALS = BoolProperty(name="Create Material", 
-                                    description="Creates material for the model", 
-                                    default=True)
+    
+    import_material = BoolProperty(name="Create Material", 
+                                   description="Creates material for the model", 
+                                   default=True)
 
-   TEXTURE_SEARCH = BoolProperty(name="Search Textures", 
-                                 description="Search for textures based on .mpq file structure", 
-                                 default=True)
-        
+    search_textures = BoolProperty(name="Search Textures", 
+                                  description="Search for textures based on .mpq file structure", 
+                                  default=True)
+    
     def execute(self, context):
-        m3import(context, 
-                 self.properties.filepath, 
-                 self.properties.IMPORT_MATERIALS,
-                 self.properties.TEXTURE_SEARCH)
+        load(context, 
+             self.filepath, 
+             self.import_material,
+             self.search_textures)
+
         return {'FINISHED'}
         
 def menu_func(self, context):
