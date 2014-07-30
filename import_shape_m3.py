@@ -940,11 +940,6 @@ class IMPORT_OT_m3(bpy.types.Operator, ImportHelper):
     bl_idname = "import_shape.m3"
     bl_label  = "Import M3"
 
-    filepath = StringProperty(name="File Path", 
-                              description="Filepath used for importing the M3 file", 
-                              maxlen= 1024, 
-                              default= "")
-    
     import_material = BoolProperty(name="Create Material", 
                                    description="Creates material for the model", 
                                    default=True)
