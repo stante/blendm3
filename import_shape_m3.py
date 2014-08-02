@@ -21,6 +21,16 @@
 # This script imports the M3 file into Blender for editing
 
 
+import bpy
+import os
+
+from bpy.props import *
+from struct import unpack_from, calcsize
+from os.path import basename
+from mathutils import Matrix
+from mathutils import Vector
+from bpy_extras.io_utils import ImportHelper
+
 bl_info = {
     'name'       : 'Import Blizzard M3 Models(.m3)',
     'author'     : 'Alexander Stante',
@@ -32,17 +42,9 @@ bl_info = {
     'warning'    : 'Alpha',
     'wiki_url'   : 'http://code.google.com/p/blendm3',
     'tracker_url': 'http://code.google.com/p/blendm3/issues/entry',
-    'category'   : 'Import/Export'}
+    'category'   : 'Import/Export'
+}
 
-import bpy
-import os
-
-from bpy.props import *
-from struct import unpack_from, calcsize
-from os.path import basename
-from mathutils import Matrix
-from mathutils import Vector
-from bpy_extras.io_utils import ImportHelper
 
 # M3 File representation encapsulating file handle
 class M3File:
@@ -313,7 +315,7 @@ class IREF:
         v3 = file.read_hvector()
         v4 = file.read_hvector()
         
-        self.matrix = Matrix(v1, v2, v3, v4).transpose()
+        self.matrix = Matrix((v1, v2, v3, v4)).transpose()
         
         
         #print(self.matrix)
@@ -772,7 +774,7 @@ def createMaterial(material):
     if tex is not None:
         tex.use_alpha             = True
         tex.extension             = 'CLIP'
-        tex.image.use_premultiply = True
+        #tex.image.use_premultiply = True
     
         slot = mat.texture_slots.add()
         slot.texture               = tex
@@ -914,11 +916,10 @@ def load(context, filepath, import_material, search_textures):
 
         for i, face in enumerate(submesh.UV):
             for l in range(len(face[0])):
-                data = mesh.uv_textures[l].data[i]
-                data.uv1 = face[0][l]
-                data.uv2 = face[1][l]
-                data.uv3 = face[2][l]
-                data.uv4 = (0,0)
+                data = mesh.uv_layers[l].data[i]
+                mesh.uv_layers[l].data[i*3 + 0].uv = face[0][l]
+                mesh.uv_layers[l].data[i*3 + 1].uv = face[1][l]
+                mesh.uv_layers[l].data[i*3 + 2].uv = face[2][l]
         
         mesh.update(True)
         ob = bpy.data.objects.new(name, mesh)
