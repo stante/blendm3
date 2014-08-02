@@ -5,7 +5,7 @@ The plugin is created by Alexander Stante (stante_at_gmail_dot_com). The
 latest version of this plugin and additional information can be found on this 
 site:
 
-    http://code.google.com/p/blendm3/
+    https://github.com/stante/blendm3
 	
 You should regularly check this website for updates. New features are 
 continuously added. The project aims to fully support the .m3 file 
@@ -20,6 +20,10 @@ If your found any errors, bugs or if you have suggestions for improvements
 feel free to contact me.
 
 === History
+
+0.15 on 2014-08-02
+  * New release after reviving the Project
+  * Adapted to work with current version of Blender 2.71
 
 0.14 2010-09-07
   * Works now with Blender from trunk (tested with r31786)

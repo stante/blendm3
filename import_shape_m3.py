@@ -40,8 +40,8 @@ bl_info = {
     'location'   : 'File > Import ',
     'description': 'Import the Blizzard M3 Model Format(.m3)',
     'warning'    : 'Alpha',
-    'wiki_url'   : 'http://code.google.com/p/blendm3',
-    'tracker_url': 'http://code.google.com/p/blendm3/issues/entry',
+    'wiki_url'   : 'https://github.com/stante/blendm3',
+    'tracker_url': 'https://github.com/stante/blendm3/issues',
     'category'   : 'Import/Export'
 }
 
