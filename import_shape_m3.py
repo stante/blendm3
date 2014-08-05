@@ -739,6 +739,53 @@ def createArmatures(bones, irefs):
     #for i, b in enumerate(bone_list):
     #    if b.parent is not None:
     #        b.tail = b.parent.head
+def createNodeMaterial(material):
+    mat = bpy.data.materials.new(material.Name)
+    mat.use_nodes = True
+
+    diffuse_bsdf = mat.node_tree.nodes['Diffuse BSDF']
+    material_out = mat.node_tree.nodes['Material Output']
+
+    # Diffusive
+    diffusive_layer = material.Layers['DIFFUSIVE']
+    tex = createTexture(material.Name + "_DIFFUSIVE", diffusive_layer.Path)
+    
+    if tex is not None:
+        node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        node.image = tex.image
+        mat.node_tree.links.new(diffuse_bsdf.inputs['Color'], node.outputs['Color'])
+
+    # Normal
+    normal_layer = material.Layers['NORMAL']
+    tex = createTexture(material.Name + "_NORMAL", normal_layer.Path)
+    
+    if tex is not None:
+        node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        node.image = tex.image
+        mat.node_tree.links.new(diffuse_bsdf.inputs['Normal'], node.outputs['Color'])
+        
+
+    # Emissive
+    emissive_layer = material.Layers['EMISSIVE']
+    tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
+
+    if tex is not None:
+        node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+        emissive = mat.node_tree.nodes.new('ShaderNodeEmission')
+        node.image = tex.image
+        mat.node_tree.links.new(emissive.inputs['Color'], node.outputs['Color'])
+        mixer = mat.node_tree.nodes.new('ShaderNodeMixShader')
+        mat.node_tree.links.new(emissive.outputs['Emission'], mixer.inputs[2])
+        mat.node_tree.links.new(diffuse_bsdf.outputs['BSDF'], mixer.inputs[1])
+        mat.node_tree.links.new(mixer.outputs['Shader'], material_out.inputs['Surface'])
+        emissive.inputs['Strength'].default_value = 2.0
+        
+
+    # Emissive and Mixer Node
+
+    return mat
+
+
 def createMaterial(material):
     mat = bpy.data.materials.new(material.Name)
     
@@ -925,8 +972,12 @@ def load(context, filepath, import_material, search_textures):
         ob = bpy.data.objects.new(name, mesh)
         
         if import_material:
-            mat = createMaterial(submesh.Material)
-            ob.data.materials.append(mat)
+            if bpy.context.scene.render.engine == 'BLENDER_RENDER':
+                mat = createMaterial(submesh.Material)
+                ob.data.materials.append(mat)
+            elif bpy.context.scene.render.engine == 'CYCLES':
+                mat = createNodeMaterial(submesh.Material)
+                ob.data.materials.append(mat)
             
         #createArmatures(submesh.bones, submesh.iref)
             
