@@ -892,21 +892,40 @@ def createMaterial(material):
         slot.use_map_emit          = True
     
     return mat
+
+def findImage(image_path):
+    '''Finds the image on the file system and returns the path, if the
+    file exists'''
+    filename = basename(image_path)
+    
+    if os.path.isfile(image_path):
+        return image_path
+
+    # Search for filename in all subdirectories
+    for prefix, directories, files in os.walk("."):
+        if filename in files:
+            return prefix + "/" + filename
+
+    return None
     
 def createTexture(name, filepath):
         realpath = os.path.abspath(filepath)
-        
-        if os.path.exists(realpath):
+        realpath = os.path.normpath(realpath)
+
+        imagepath = findImage(realpath)
+
+        if imagepath:
             tex = bpy.data.textures.new(name, 'IMAGE')
         
             try:
-                tex.image = bpy.data.images.load(realpath)
-                print("Importing texture: %s" % realpath)
+                tex.image = bpy.data.images.load(imagepath)
+                print("Importing image: %s ok." % imagepath)
 
             except Exception as err:
                 print("Cannot load texture: %s (%s)" % (realpath, str(err))) 
                 return None
         else:
+            print("Importing image: %s failed." % basename(realpath))
             return None
         
         return tex
