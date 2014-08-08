@@ -426,7 +426,11 @@ class MAT:
         self.Layers = {}
         
         for i in range(13):
-            self.Layers[LAYR.TYPES[i]] = file.read_reference_by_id()
+            layer = file.read_reference_by_id()
+            
+            # Layer only exists if they have a path entry
+            if (layer.Path != None and layer.Path != ""):
+                self.Layers[LAYR.TYPES[i]] = layer
             
         self.D3            = file.read_uint()
         self.LayerBlend    = file.read_uint()
@@ -746,40 +750,45 @@ def createNodeMaterial(material):
     diffuse_bsdf = mat.node_tree.nodes['Diffuse BSDF']
     material_out = mat.node_tree.nodes['Material Output']
 
+    for key in material.Layers.keys():
+        print("Material: ", key, " Path: ", material.Layers[key].Path)
+
     # Diffusive
-    diffusive_layer = material.Layers['DIFFUSIVE']
-    tex = createTexture(material.Name + "_DIFFUSIVE", diffusive_layer.Path)
+    if ('DIFFUSIVE' in material.Layers):
+        layer = material.Layers['DIFFUSIVE']
+        tex = createTexture(material.Name + "_DIFFUSIVE", layer.Path)
     
-    if tex is not None:
-        node = mat.node_tree.nodes.new('ShaderNodeTexImage')
-        node.image = tex.image
-        mat.node_tree.links.new(diffuse_bsdf.inputs['Color'], node.outputs['Color'])
+        if tex is not None:
+            node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+            node.image = tex.image
+            mat.node_tree.links.new(diffuse_bsdf.inputs['Color'], node.outputs['Color'])
 
     # Normal
-    normal_layer = material.Layers['NORMAL']
-    tex = createTexture(material.Name + "_NORMAL", normal_layer.Path)
+    if ('NORMAL' in material.Layers):
+        layer = material.Layers['NORMAL']
+        tex = createTexture(material.Name + "_NORMAL", layer.Path)
     
-    if tex is not None:
-        node = mat.node_tree.nodes.new('ShaderNodeTexImage')
-        node.image = tex.image
-        mat.node_tree.links.new(diffuse_bsdf.inputs['Normal'], node.outputs['Color'])
+        if tex is not None:
+            node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+            node.image = tex.image
+            mat.node_tree.links.new(diffuse_bsdf.inputs['Normal'], node.outputs['Color'])
         
 
     # Emissive
-    emissive_layer = material.Layers['EMISSIVE']
-    tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
+    if ('EMISSIVE' in material.Layers):
+        layer = material.Layers['EMISSIVE']
+        tex = createTexture(material.Name + "_EMISSIVE", layer.Path)
 
-    if tex is not None:
-        node = mat.node_tree.nodes.new('ShaderNodeTexImage')
-        emissive = mat.node_tree.nodes.new('ShaderNodeEmission')
-        node.image = tex.image
-        mat.node_tree.links.new(emissive.inputs['Color'], node.outputs['Color'])
-        mixer = mat.node_tree.nodes.new('ShaderNodeMixShader')
-        mat.node_tree.links.new(emissive.outputs['Emission'], mixer.inputs[2])
-        mat.node_tree.links.new(diffuse_bsdf.outputs['BSDF'], mixer.inputs[1])
-        mat.node_tree.links.new(mixer.outputs['Shader'], material_out.inputs['Surface'])
-        emissive.inputs['Strength'].default_value = 2.0
-        
+        if tex is not None:
+            node = mat.node_tree.nodes.new('ShaderNodeTexImage')
+            emissive = mat.node_tree.nodes.new('ShaderNodeEmission')
+            node.image = tex.image
+            mat.node_tree.links.new(emissive.inputs['Color'], node.outputs['Color'])
+            mixer = mat.node_tree.nodes.new('ShaderNodeMixShader')
+            mat.node_tree.links.new(emissive.outputs['Emission'], mixer.inputs[2])
+            mat.node_tree.links.new(diffuse_bsdf.outputs['BSDF'], mixer.inputs[1])
+            mat.node_tree.links.new(mixer.outputs['Shader'], material_out.inputs['Surface'])
+            emissive.inputs['Strength'].default_value = 2.0
 
     # Emissive and Mixer Node
 
@@ -800,72 +809,76 @@ def createMaterial(material):
     #=============================================================
     # Create Diffusive
     #=============================================================
-    diffusive_layer = material.Layers['DIFFUSIVE']
-    
-    tex = createTexture(material.Name + "_DIFFUSIVE", diffusive_layer.Path)
-    if tex is not None:
-        tex.use_alpha = False
-    
-        slot = mat.texture_slots.add()
-        slot.texture               = tex
-        slot.texture_coords        = 'UV'
-        slot.use_map_diffuse       = True
-        slot.use_map_color_diffuse = True
+    if ('DIFFUSIVE' in material.Layers):
+        layer = material.Layers['DIFFUSIVE']
+        tex = createTexture(material.Name + "_DIFFUSIVE", layer.Path)
+
+        if tex is not None:
+            tex.use_alpha = False
+            
+            slot = mat.texture_slots.add()
+            slot.texture               = tex
+            slot.texture_coords        = 'UV'
+            slot.use_map_diffuse       = True
+            slot.use_map_color_diffuse = True
     
     #=============================================================
     # Create Decal
     #=============================================================
-    diffusive_layer = material.Layers['DECAL']
-    
-    tex = createTexture(material.Name + "_DECAL", diffusive_layer.Path)
-    if tex is not None:
-        tex.use_alpha             = True
-        tex.extension             = 'CLIP'
-        #tex.image.use_premultiply = True
-    
-        slot = mat.texture_slots.add()
-        slot.texture               = tex
-        slot.texture_coords        = 'UV'
-        slot.use_map_diffuse       = True
-        slot.use_map_color_diffuse = True
-        slot.uv_layer              = 'UV_1'
+    if ('DECAL' in material.Layers):
+        layer = material.Layers['DECAL']
+        tex = createTexture(material.Name + "_DECAL", layer.Path)
+
+        if tex is not None:
+            tex.use_alpha             = True
+            tex.extension             = 'CLIP'
+            #tex.image.use_premultiply = True
+            
+            slot = mat.texture_slots.add()
+            slot.texture               = tex
+            slot.texture_coords        = 'UV'
+            slot.use_map_diffuse       = True
+            slot.use_map_color_diffuse = True
+            slot.uv_layer              = 'UV_1'
     
     #==============================================================
     # Create Specular
     #==============================================================
-    specular_layer  = material.Layers['SPECULAR']
-    
-    tex = createTexture(material.Name + "_SPECULAR", specular_layer.Path)
-    if tex is not None:
-        tex.use_alpha = False
-    
-        slot = mat.texture_slots.add()
-        slot.texture               = tex
-        slot.texture_coords        = 'UV'
-        slot.use_map_color_diffuse = False   
-        slot.use_map_specular      = True
-        #slot.use_map_color_spec    = True
-        slot.specular_factor       = 0.2
+    if ('SPECULAR in material.Layers'):
+        layer  = material.Layers['SPECULAR']
+        tex = createTexture(material.Name + "_SPECULAR", layer.Path)
+
+        if tex is not None:
+            tex.use_alpha = False
+            
+            slot = mat.texture_slots.add()
+            slot.texture               = tex
+            slot.texture_coords        = 'UV'
+            slot.use_map_color_diffuse = False   
+            slot.use_map_specular      = True
+            #slot.use_map_color_spec    = True
+            slot.specular_factor       = 0.2
     
     #==============================================================
     # Create Normal
     #==============================================================
-    normal_layer = material.Layers['NORMAL']
-    
-    tex = createTexture(material.Name + "_NORMAL", normal_layer.Path)
-    if tex is not None:
-        slot = mat.texture_slots.add()
-        slot.texture               = tex # (texture=tex, texture_coordinates='UV', map_to='NORMAL')
-        slot.texture_coords        = 'UV'
-        slot.use_map_color_diffuse = False
-        slot.use_map_normal        = True
+    if ('NORMAL' in material.Layers):
+        layer = material.Layers['NORMAL']
+        tex = createTexture(material.Name + "_NORMAL", layer.Path)
+
+        if tex is not None:
+            slot = mat.texture_slots.add()
+            slot.texture               = tex # (texture=tex, texture_coordinates='UV', map_to='NORMAL')
+            slot.texture_coords        = 'UV'
+            slot.use_map_color_diffuse = False
+            slot.use_map_normal        = True
 
     #=============================================================
     # Create Emissive Color
     #=============================================================
     #emissive_layer = material.Layers['EMISSIVE_COLOR']
 
-    #tex = createTexture(material.Name + "_EMISSIVE_COLOR", emissive_layer.Path)
+    #tex = createTexture(material.Name + "_EMISSIVE_COLOR", layer.Path)
     #tex.use_calculate_alpha = True
     #tex.use_alpha           = True
     
@@ -878,18 +891,19 @@ def createMaterial(material):
     #=============================================================
     # Create Emissive
     #=============================================================
-    emissive_layer = material.Layers['EMISSIVE']
+    if ('EMISSIVE' in material.Layers):
+        layer = material.Layers['EMISSIVE']
+        tex = createTexture(material.Name + "_EMISSIVE", layer.Path)
 
-    tex = createTexture(material.Name + "_EMISSIVE", emissive_layer.Path)
-    if tex is not None:
-        tex.use_calculate_alpha = True
-        tex.use_alpha           = True
-    
-        slot = mat.texture_slots.add()
-        slot.texture               = tex
-        slot.texture_coords        = 'UV'
-        slot.use_map_color_diffuse = False
-        slot.use_map_emit          = True
+        if tex is not None:
+            tex.use_calculate_alpha = True
+            tex.use_alpha           = True
+            
+            slot = mat.texture_slots.add()
+            slot.texture               = tex
+            slot.texture_coords        = 'UV'
+            slot.use_map_color_diffuse = False
+            slot.use_map_emit          = True
     
     return mat
 
