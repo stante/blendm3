@@ -35,7 +35,7 @@ bl_info = {
     'name'       : 'Import Blizzard M3 Models(.m3)',
     'author'     : 'Alexander Stante',
     'version'    : (0, 14),
-    'blender'    : (2, 5, 3),
+    'blender'    : (2, 80, 0),
     "api"        : 31667,
     'location'   : 'File > Import ',
     'description': 'Import the Blizzard M3 Model Format(.m3)',
@@ -1025,11 +1025,11 @@ class IMPORT_OT_m3(bpy.types.Operator, ImportHelper):
     bl_idname = "import_shape.m3"
     bl_label  = "Import M3"
 
-    import_material = BoolProperty(name="Create Material", 
+    import_material: BoolProperty(name="Create Material", 
                                    description="Creates material for the model", 
                                    default=True)
 
-    search_textures = BoolProperty(name="Search Textures", 
+    search_textures: BoolProperty(name="Search Textures", 
                                   description="Search for textures based on .mpq file structure", 
                                   default=True)
     
@@ -1040,17 +1040,24 @@ class IMPORT_OT_m3(bpy.types.Operator, ImportHelper):
              self.search_textures)
 
         return {'FINISHED'}
+
+
+exported_classes = {
+    IMPORT_OT_m3,
+}
         
 def menu_func(self, context):
     self.layout.operator(IMPORT_OT_m3.bl_idname, text="Blizzard M3 (.m3)")
 
 def register():
-    bpy.utils.register_module(__name__)
-    bpy.types.INFO_MT_file_import.append(menu_func)
-    
+    for c in exported_classes:
+        bpy.utils.register_class(c)
+    bpy.types.TOPBAR_MT_file_export.append(menu_func)
 def unregister():
-    bpy.utils.unregister_module(__name__)
-    bpy.types.INFO_MT_file_import.remove(menu_func)
+    for c in reversed(exported_classes):
+        bpy.utils.unregister_class(c)
+    bpy.types.TOPBAR_MT_file_export.remove(menu_func)
+
 
 if __name__ == "__main__":
     register()
