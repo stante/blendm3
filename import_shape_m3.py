@@ -1052,11 +1052,11 @@ def menu_func(self, context):
 def register():
     for c in exported_classes:
         bpy.utils.register_class(c)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func)
+    bpy.types.TOPBAR_MT_file_import.append(menu_func)
 def unregister():
     for c in reversed(exported_classes):
         bpy.utils.unregister_class(c)
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func)
+    bpy.types.TOPBAR_MT_file_import.remove(menu_func)
 
 
 if __name__ == "__main__":
